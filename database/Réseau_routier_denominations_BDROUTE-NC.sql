@@ -2,6 +2,9 @@
 -- voies de BDROUTE, voir :
 -- <https://georep-dtsi-sgt.opendata.arcgis.com/maps/d3915082450a4405bb30dda99e19bc61/about>
 
+-- pour régénérer le schéma SQL en cas de changement avec <https://csvkit.readthedocs.io/en/latest/>
+-- csvsql --dialect postgresql --delimiter ","  data/Réseau_routier_denominations_BDROUTE-NC.csv --tables dittt_denominations
+
 CREATE TABLE IF NOT EXISTS dittt_denominations (
         objectid INTEGER PRIMARY KEY, 
         nom_code VARCHAR, 
