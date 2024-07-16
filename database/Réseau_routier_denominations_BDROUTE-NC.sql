@@ -1,3 +1,7 @@
+-- schéma de relation postgres associé aux dénominations des
+-- voies de BDROUTE, voir :
+-- <https://georep-dtsi-sgt.opendata.arcgis.com/maps/d3915082450a4405bb30dda99e19bc61/about>
+
 CREATE TABLE IF NOT EXISTS dittt_denominations (
         objectid INTEGER PRIMARY KEY, 
         nom_code VARCHAR, 
