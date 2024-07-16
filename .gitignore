@@ -1,2 +1,3 @@
+backup/
 .vscode/
-tmp.sql
+[tT][mM][pP].*
