@@ -17,7 +17,7 @@ ogr2ogr $COMMON_OPTS -lco FID=objectid -nln dittt_noeuds PG:"$CONNSTRING"\
   /vsizip/$DATA/Réseau_routier_noeuds_BDROUTE-NC.zip
 ogr2ogr $COMMON_OPTS -lco FID=objectid -nlt PROMOTE_TO_MULTI -nln dittt_segments PG:"$CONNSTRING"\
   /vsizip/$DATA/Réseau_routier_segments_BDROUTE-NC.zip
-psql -d $PGDATABASE -f ../database/Réseau_routier_denominations_BDROUTE-NC.sql
+psql -d $PGDATABASE -f ../database/create_table_denominations.sql
 psql -d $PGDATABASE -c "DELETE FROM dittt_denominations;"
 psql -d $PGDATABASE -c "\COPY dittt_denominations FROM '$DATA/Réseau_routier_denominations_BDROUTE-NC.csv' DELIMITER ',' CSV HEADER;"
 
