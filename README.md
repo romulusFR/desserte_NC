@@ -1,14 +1,14 @@
 # Élaboration d'une matrice de desserte en Nouvelle-Calédonie
 
-Ce document décrit le calcul du temps de trajet par la route entre les IRIS et les sites miniers (mines et usines) de Nouvelle-Calédonie en croisant les données suivantes :
+Ce document décrit le calcul du temps de trajet par la route entre les IRIS et des points d'intérêts (POI), notamment les sites miniers (centre et usines) de Nouvelle-Calédonie, en croisant les données suivantes :
 
 - Le réseau routier fourni par la [DITTT](https://dittt.gouv.nc/).
 - Les sites miniers fournis par la [DIMENC](https://dimenc.gouv.nc/).
 - Les IRIS proposés par l'[ISEE](https://www.isee.nc) pour le projet [CNRT Mine et Territoires - Impact de la mine sur l'évolution des territoires](https://cnrt.nc/mine-et-territoire/).
 
-Le but est d'obtenir une _matrice de desserte_ où les durées trajets entre les sites et les nœuds du réseau routier sont agrégées par IRIS afin d'estimer la proximité par la route entre les mines et les IRIS.
-Un extrait indicatif (les données complètes sont fournies dans le dossier [dist](dist/)) de dix durées de trajets vers les usines est donné ci-après.
-L'avant-dernière ligne indique qu'il faut entre 70 et 147 minutes, avec une durée médiane de 105 minutes et une moyenne de 108 minutes, pour aller de l'usine _KNS - Koniambo_ (dite _usine nord_) aux noeuds routiers situés dans l'IRIS 2306 _Aoupinié - Goro Darawé_ sur la commune de Ponérihouen.
+Le but est d'obtenir une _matrice de desserte_ où les durées trajets entre les POI et les nœuds du réseau routier sont agrégés par IRIS afin d'estimer la proximité par la route entre les POI et les IRIS.
+Un extrait indicatif (les données complètes sont fournies dans le dossier [dist](dist/)) de dix durées de trajets des usines de nickel vers les IRIS est donné ci-après.
+L'avant-dernière ligne indique qu'il faut entre 70 et 147 minutes, avec une durée médiane de 105 minutes et une moyenne de 108 minutes, pour aller de l'usine _KNS - Koniambo_ (dite _usine nord_) aux nœuds routiers situés dans l'IRIS 2306 _Aoupinié - Goro Darawé_ sur la commune de [Ponérihouen](https://fr.wikipedia.org/wiki/Pon%C3%A9rihouen).
 
 ```raw
  Code IRIS |              Libellé IRIS              | Code commune | Société |   Site   | Durée minimum | Durée médiane | Durée moyenne | Durée maximum 
@@ -50,14 +50,17 @@ cnrt_iris
 dass_etabs_sante
 ```
 
+Les schémas finaux après exécution de toutes les étapes sont donnés en annexe.
+
 ### Nettoyage
 
-On exécute le script [alter_tables_pk_fk.sql](database/alter_tables_pk_fk.sql) pour durcir le schéma en ajoutant des clefs alternatives et desc lefs étrangères.
+On exécute le script [alter_tables_pk_fk.sql](database/alter_tables_pk_fk.sql) pour durcir le schéma en ajoutant des clefs alternatives et des clefs étrangères.
 On corrige au passage quelques erreurs ponctuelles sur la version du 2024-07-16.
+Voir le fichier [03_cleaning.sh](scripts/03_cleaning.sh) qui exécute le fichier `sql`.
 
 ### Vérification
 
-Les requêtes SQL suivantes permettent d'apprécier les volumes des tables.
+Les requêtes SQL suivantes permettent d'apprécier la qualité et le volume des données.
 
 #### Nombre total de kilomètres par type de segment
 
@@ -127,82 +130,261 @@ ORDER BY i.code_iris ASC;
 --  0506      | Jacarandas I                                     |        188 |         127 |        13 |     10.24 |            0.68
 ```
 
-## Calcul des trajets
+#### La longueur de la R.T.1 : 402 km
+
+```sql
+SELECT sum(st_length(wkb_geometry))/1e3 AS long_km
+FROM dittt_segments JOIN dittt_denominations on seg_nom_gu = nom_guid
+WHERE nom_code = 'R.T.1';
+
+--       long_km      
+-- -------------------
+--  401.6447358156211
+```
+
+## Calcul des trajets avec `pgRouting`
+
+Voir le fichier [04_prepare_pgr.sh](scripts/04_prepare_pgr.sh) qui exécute les programmes SQL de cette section.
 
 ### Préparation
 
-On crée une vue _matérialisée_ `dittt_segments_pgr` qui structure les données sources des segments au format attendu par `pgRouting`.
-On réduit les types de segments à seulement trois catégories sur les 11 initiales, voir le fichier [create_view_pgr_routing.sql](database/create_view_pgr_routing.sql) :
+On crée une vue _matérialisée_ `dittt_segments_pgr` qui structure les données sources au [format attendu par `pgRouting`](https://docs.pgrouting.org/3.6/en/pgr_dijkstraNearCost.html#edges-sql).
+On prend en compte la direction des segments, la pente et la vitesse maximale autorisée dans le calcul des coûts.
+De plus, on réduit les types à trois sur les 11 initiaux, voir le fichier [create_view_pgr.sql](database/create_view_pgr.sql) :
 
-- les types `VCU`, `VCS`, `B`, `VR`, `A`, `RP` deviennent tous `R`, pour _route_,
-- le type `P` reste `P`, pour _piste_,
-- les autres types, à savoir `PC`, `G`, `PA` et `VS` deviennent `NR`, pour _non route_.
+- Les types `VCU`, `VCS`, `B`, `VR`, `A`, `RP` deviennent tous `R`, pour _route_,
+- Le type `P` reste `P`, pour _piste_,
+- Les autres types, à savoir `PC`, `G`, `PA` et `VS` deviennent `NR`, pour _non route_.
 
-On obtient un extrait comme suit (en supprimant la colonne de géométrie).
+On obtient un extrait comme suit avec la requête `select * from dittt_segments_pgr tablesample bernoulli(.005);`.
 
 ```raw
-   id   | source | target | seg_type | seg_sens | distance | deniv_m |   total_distance   | speed |         cost         |     reverse_cost     |
---------+--------+--------+----------+----------+----------+---------+--------------------+-------+----------------------+----------------------+
-   2531 |  73944 |  73943 | P        | D        |       23 |       3 |  23.69993344399385 |    30 |   2.8439920132792618 |   2.8439920132792618 |
-   2606 |   6735 |   6784 | X        | D        |      136 |       8 | 136.13126478598667 |     5 |     98.0145106459104 |     98.0145106459104 |
-   4091 | 129601 | 129612 | P        | D        |       39 |       5 |  39.15517809531599 |    30 |    4.698621371437919 |    4.698621371437919 |
-   4533 | 135180 | 135185 | P        | D        |      187 |      24 | 188.38362145470865 |    30 |   22.606034574565037 |   22.606034574565037 |
-   5204 | 149120 | 149110 | P        | D        |       64 |       3 |  64.27757192808284 |    30 |     7.71330863136994 |     7.71330863136994 |
-   5811 |  96911 |  96616 | P        | D        |     1730 |       0 |  1730.395672921742 |    30 |   207.64748075060902 |   207.64748075060902 |
-   6764 |  21109 |  20965 | P        | D        |      135 |       5 | 135.40591987824868 |    30 |   16.248710385389842 |   16.248710385389842 |
-   7260 | 129882 | 130074 | P        | D        |      312 |      63 | 317.91861289665326 |    30 |    38.15023354759839 |    38.15023354759839 |
-   7385 |  20233 |  20343 | P        | D        |       55 |      12 | 55.963619531527975 |    30 |    6.715634343783356 |    6.715634343783356 |
-   9526 |  93515 |  93530 | P        | D        |       43 |       5 | 43.378889913577204 |    30 |    5.205466789629265 |    5.205466789629265 |
-   9714 |  21477 |  21507 | P        | D        |       34 |       4 |  34.40188332575905 |    30 |    4.128225999091086 |    4.128225999091086 |
-   9996 | 144512 | 144510 | P        | D        |       43 |       4 |  43.21989353097915 |    30 |    5.186387223717498 |    5.186387223717498 |
-  10352 |  24012 |  24133 | P        | D        |      215 |      11 |   214.862908473982 |    30 |    25.78354901687784 |    25.78354901687784 |
-  10561 | 138397 | 138410 | P        | D        |       11 |       0 | 10.647242292350215 |    30 |   1.2776690750820259 |   1.2776690750820259 |
-  11286 | 139527 | 181254 | P        | D        |       46 |       1 |  46.47503631207445 |    30 |    5.577004357448934 |    5.577004357448934 |
-  12954 |  14303 |  14299 | X        | D        |      130 |      16 |  131.3424740308101 |     5 |    94.56658130218328 |    94.56658130218328 |
-  13019 |  16139 |  16176 | X        | D        |      104 |       7 | 104.16797541725725 |     5 |    75.00094230042522 |    75.00094230042522 |
-  13056 |  14239 |  14225 | X        | D        |       36 |       5 |  35.95506859052979 |     5 |    25.88764938518145 |    25.88764938518145 |
-  14405 | 159194 | 159191 | X        | D        |       13 |       1 | 12.906964169454719 |    10 |    4.646507101003699 |    4.646507101003699 |
-  14764 | 142325 | 142493 | P        | D        |      188 |       4 |  188.4099120648337 |    30 |   22.609189447780043 |   22.609189447780043 |
-  14813 | 142209 | 142199 | P        | D        |       31 |       1 | 30.845765344883205 |    30 |   3.7014918413859843 |   3.7014918413859843 |
-  15030 | 107221 | 107205 | P        | D        |      138 |       1 | 137.87326836809217 |    30 |    16.54479220417106 |    16.54479220417106 |
-  15736 |  20850 |  20849 | P        | D        |        6 |       1 | 5.8264334933933055 |    30 |   0.6991720192071966 |   0.6991720192071966 |
-  18970 | 102285 | 102247 | P        | D        |      209 |       0 | 208.83727668121665 |    30 |   25.060473201745996 |   25.060473201745996 |
-  21557 | 101193 | 101253 | P        | D        |      205 |       0 | 204.80203474722632 |    30 |   24.576244169667156 |   24.576244169667156 |
-  21960 | 151778 | 151757 | P        | D        |       62 |       6 |  62.01349654329259 |    30 |     7.44161958519511 |     7.44161958519511 |
-  22036 |  92054 |  92049 | P        | D        |       19 |       0 | 19.046222723552408 |    30 |   2.2855467268262886 |   2.2855467268262886 |
-  22157 |  99413 |  99438 | P        | D        |      114 |       6 | 114.61926430901472 |    30 |   13.754311717081766 |   13.754311717081766 |
-  22306 | 114333 | 114402 | P        | D        |       81 |       1 |  80.65686423243504 |    30 |    9.678823707892205 |    9.678823707892205 |
-  24250 |  99211 |  99226 | P        | D        |       27 |       2 | 27.383977314055187 |    30 |   3.2860772776866223 |   3.2860772776866223 |
-  24486 | 107831 | 107849 | P        | D        |       51 |       1 | 51.332368928528915 |    30 |    6.159884271423469 |    6.159884271423469 |
-  24864 |  95148 |  95234 | P        | D        |      456 |       4 | 456.37937388313446 |    30 |    54.76552486597613 |    54.76552486597613 |
-  25482 | 182030 | 106560 | P        | D        |       90 |       2 |  90.48075354470839 |    30 |   10.857690425365007 |   10.857690425365007 |
-  26170 |  92137 |  92105 | P        | D        |      416 |       4 |  415.8410390161917 |    30 |      49.900924681943 |      49.900924681943 |
-  30875 | 118620 | 118636 | P        | D        |       54 |       1 | 54.066553923615785 |    30 |    6.487986470833894 |    6.487986470833894 |
-  31029 | 114726 | 114838 | P        | D        |      103 |      15 | 104.45988882216065 |    30 |   12.535186658659278 |   12.535186658659278 |
-  32787 | 112157 | 112106 | P        | D        |       87 |       4 |  87.29915600763657 |    30 |   10.475898720916387 |   10.475898720916387 |
-  33690 |  10634 |  10649 | X        | D        |       99 |       8 |  99.80180708079313 |     5 |    71.85730109817105 |    71.85730109817105 |
-  33726 |  15515 |  15549 | X        | D        |      228 |      23 |  229.4858358455314 |     5 |    165.2298018087826 |    165.2298018087826 |
-  33935 |  92789 |  92770 | X        | D        |       65 |       6 |  65.71015364092206 |     5 |    47.31131062146388 |    47.31131062146388 |
-  34437 | 116406 | 116379 | P        | D        |       41 |       1 |  40.96291915599641 |    30 |    4.915550298719569 |    4.915550298719569 |
-  34750 | 122717 | 122770 | P        | D        |      147 |       6 | 147.12602131448963 |    30 |   17.655122557738753 |   17.655122557738753 |
-  35223 | 155136 | 155036 | X        | D        |      258 |      15 |  258.8079289938666 |     5 |   186.34170887558395 |   186.34170887558395 |
-  35390 | 122382 | 122248 | X        | D        |      185 |       3 |   185.287229334341 |     5 |   133.40680512072552 |   133.40680512072552 |
-  35432 | 122863 | 122880 | X        | D        |       13 |       2 | 13.243684677016333 |     5 |     9.53545296745176 |     9.53545296745176 |
-  35703 | 119206 | 119198 | X        | D        |       34 |       7 | 34.820536358987674 |     5 |   25.070786178471128 |   25.070786178471128 |
-  38267 | 124631 | 124668 | X        | D        |      127 |      11 | 127.48839133693748 |     5 |    91.79164176259499 |    91.79164176259499 |
-  38871 | 110822 | 110948 | X        | D        |      251 |      73 |  261.1214895403874 |     5 |   188.00747246907895 |   188.00747246907895 |
-  39770 |  97326 |  97339 | X        | D        |       34 |       6 |  34.82088705117006 |     5 |   25.071038676842445 |   25.071038676842445 |
-  40686 |  20545 |  20483 | P        | D        |       27 |       3 | 27.425341772953125 |    30 |   3.2910410127543748 |   3.2910410127543748 |
-  41349 |  14925 |  14901 | P        | D        |       80 |       7 |  80.50623795270936 |    30 |    9.660748554325123 |    9.660748554325123 |
-  42445 | 148181 | 148180 | P        | D        |      252 |      46 |  256.4726226080874 |    30 |   30.776714712970488 |   30.776714712970488 |
-  43567 | 149105 | 149175 | X        | D        |      916 |      78 |  919.5395588067488 |     5 |    662.0684823408592 |    662.0684823408592 |
-  44255 |  56370 |  56335 | P        | D        |       40 |       1 |  40.40096380427812 |    30 |    4.848115656513374 |    4.848115656513374 |
-  44779 |  68352 |  68337 | P        | D        |       69 |       9 |  69.53868380966733 |    30 |     8.34464205716008 |     8.34464205716008 |
-  46356 |  57656 |  57652 | R        | D        |       68 |       0 |  68.41720571164056 |    50 |     4.92603881123812 |     4.92603881123812 |
-  47733 |  61516 |  61519 | P        | D        |        4 |       1 |  4.114404083570949 |    30 |   0.4937284900285138 |   0.4937284900285138 |
-  49106 |  83162 |  83176 | P        | D        |       25 |       1 |  25.46674992446989 |    30 |   3.0560099909363867 |   3.0560099909363867 |
-  49241 |  87054 |  87047 | X        | D        |        6 |       0 |  6.475425740337137 |     5 |    4.662306533042739 |    4.662306533042739 |
+   id   | source | target | seg_type | seg_sens | distance | deniv_m |   total_distance   | speed |        cost        |    reverse_cost    
+--------+--------+--------+----------+----------+----------+---------+--------------------+-------+--------------------+--------------------
+   3736 | 132158 | 132155 | P        | D        |       57 |       1 |  57.47487104456262 |    30 |  6.896984525347514 |  6.896984525347514
+ 203290 | 180277 | 199113 | R        | D        |       69 |       3 |  68.88898975360519 |    50 |  4.960007262259573 |  4.960007262259573
+ 206516 | 185873 | 195805 | R        | D        |       23 |       0 |  23.44438010752035 |    50 |  1.687995367741465 |  1.687995367741465
+  18005 |  94222 |  94204 | X        | D        |       79 |       1 |  78.51453385221917 |     5 |  56.53046437359781 |  56.53046437359781
+  48567 |  87733 |  87772 | P        | D        |       26 |       0 |  26.38008924283453 |    30 |  3.165610709140143 |  3.165610709140143
+  83870 |  73094 |  73060 | X        | D        |      173 |      19 |  174.2559863110222 |     5 |   125.464310143936 |   125.464310143936
+  90846 |  62556 |  62624 | P        | D        |       86 |       6 |   86.0641647575717 |    30 | 10.327699770908604 | 10.327699770908604
+ 119974 | 190934 | 111107 | P        | D        |       97 |       1 |  96.73794243361631 |    30 | 11.608553092033956 | 11.608553092033956
+ 198439 | 198148 | 197399 | P        | D        |       69 |       0 |  69.17732474378623 |    30 |  8.301278969254348 |  8.301278969254348
+ 241111 | 208483 | 208970 | P        | D        |      122 |       0 | 122.29569950215429 |    30 | 14.675483940258514 | 14.675483940258514
+ 252103 | 225378 | 225379 | P        | D        |      280 |       5 | 279.82897145348653 |    30 |  33.57947657441838 |  33.57947657441838
+ 297747 | 259902 | 258090 | P        | D        |      295 |      23 | 296.24233359406423 |    30 |  35.54908003128771 |  35.54908003128771
+(12 rows)
 ```
+
+#### Trajets de référence
+
+On calcule un trajet de référence entre les deux sites de l'UNC et l'usine Nord :
+
+- Noeud Nouville UNC : `objectid = 270424` (type `J`).
+  - Point situé au 102 Av. James Cook à Nouville, à l'intersection avec la rue Kataoui.
+  - GPS : -22.2619,166.4042
+- Noeud Baco UNC : `objectid = 200545` (type `FDR`).
+  - Point situé au bout du chemin entre l'UNC et la caserne de pompiers, au début de la RPN2 / Koné Tiwaka.
+  - GPS : -21.0923,164.8913
+- Noeud Usine Nord : `objectid = 91270` (type `J`).
+  - Point situé au plus proche de celui de l'usine dans les données DIMENC, sur la piste après la RT1, au pied du four.
+  - GPS : -21.0138,164.6836
+
+On donne la requête, un extrait du résultat et une visualisation graphique du trajet ci-après.
+
+```sql
+SELECT
+  direction.edge,
+  e.seg_type,
+  e.distance,
+  e.speed,
+  greatest(e.cost, e.reverse_cost) as cost,
+  ROUND(direction.agg_cost) AS agg_cost
+FROM pgr_dijkstra('SELECT * FROM dittt_segments_pgr',
+                   270424, 200545, TRUE) AS direction
+     JOIN dittt_segments_pgr e ON direction.edge = e.id
+ORDER BY seq;
+
+--   edge  | seg_type | distance | speed |         cost         | agg_cost 
+-- --------+----------+----------+-------+----------------------+----------
+--  307443 | R        |       35 |    50 |    2.503083667560222 |        0
+--  302188 | R        |      114 |    50 |    8.217825165963008 |        3
+--  302249 | R        |       32 |    50 |   2.2773306928972183 |       11
+--  306453 | R        |       15 |    50 |    1.066954653737687 |       13
+-- ...
+--  217857 | R        |       98 |    50 |    7.036030838506505 |    10496
+--  217854 | R        |       54 |    50 |   3.9159900551178333 |    10503
+--  227627 | P        |       12 |    30 |   1.4302731087691083 |    10507
+--  217453 | P        |       88 |    30 |   10.572007930984094 |    10508
+-- (1185 rows)
+```
+
+![Trajet de référénce de Nouville à Baco](img/trajet-reference-Nouville-Baco.png)
+
+Les coûts sont en secondes, ici 10 518 au total soit 02:55:18 pour une longueur totale de 263 305 mètres en parcourant 1 185 segments.
+C'est un trajet particulièrement détaillé, dû à la finesse du réseau DITTT.
+On compare le même trajet par les services qui indique tous la même distance et des durées légèrement supérieures :
+
+- [Google Maps](https://maps.app.goo.gl/VbibXFzr3HYfEEHw7) : durée de 03:13:00, soit un écart de 10%.
+- [OpenStreetMap avec l'algorithme GraphHopper](https://www.openstreetmap.org/directions?engine=graphhopper_car&route=-22.2619%2C166.4042%3B-21.0929%2C164.8917#map=10/-21.6822/165.6728) : durée de 02:58:00, soit un écart de 2%.
+- [OpenStreetMap avec l'algorithme OSRM](https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=-22.2619%2C166.4042%3B-21.0929%2C164.8917) ou via [l'API directement](http://router.project-osrm.org/route/v1/driving/166.4042,-22.2619;164.8913,-21.0923) : distance de 263 809 mètres et une durée un peu plus pessimiste de 03:32:12.
+
+On teste sur le même trajet les fonctions de plus court chemin qu'on utilisera dans la suite.
+
+```sql
+-- trajet simple, correspont à la somme agg_cost + cost du trajet avec pgr_dijkstra
+SELECT * FROM pgr_dijkstraCost('SELECT * FROM dittt_segments_pgr', 270424, 200545, TRUE) AS direction;
+--  start_vid | end_vid |      agg_cost      
+-- -----------+---------+--------------------
+--     270424 |  200545 | 10518.802913674612
+-- Time: 980,637 ms
+
+-- écarts de 3 secondes entre les deux directions via cost matrix
+SELECT * FROM pgr_dijkstraCostMatrix('SELECT * FROM dittt_segments_pgr', ARRAY[270424, 200545], TRUE) AS direction;
+
+--  start_vid | end_vid |      agg_cost      
+-- -----------+---------+--------------------
+--     200545 |  270424 | 10515.429965522622
+--     270424 |  200545 | 10518.802913674612
+-- Time: 1050,469 ms (00:01,050)
+
+-- de l'usine nords aux deux sites UNC
+SELECT * FROM pgr_dijkstraCost('SELECT * FROM dittt_segments_pgr', 91270, ARRAY[270424, 200545], TRUE) AS direction;
+--  start_vid | end_vid |      agg_cost      
+-- -----------+---------+--------------------
+--      91270 |  200545 | 1348.1856932073051
+--      91270 |  270424 | 11798.774051661303
+-- Time: 989,532 ms
+```
+
+### Composantes connexes et résolution des nœuds DITTT
+
+Une première étape du calcul est de calculer pour chaque POI identifié géométriquement un nœud DITTT le plus proche.
+Ce problème est appelé [map matching](https://en.wikipedia.org/wiki/Map_matching).
+Pour cela, on ajoute une colonne `dittt_noeud_ref` à chacune des tables des POI avec une clef étrangère vers la table DITTT.
+
+On ajoute préalablement un identifiant de composante connexe du réseau à chaque nœud, cela permettra de vérifier que les nœuds DITTT identifiés sont bien routables, c'est-à-dire dans un morceau connexe du réseau principal.
+
+```sql
+select component, count(*) as count from dittt_noeuds group by component order by count desc;
+
+--  component | count  
+-- -----------+--------
+--          1 | 185273
+--       NULL |  36662
+--      90958 |  10205
+--      81484 |   7490
+--     171983 |   3875
+--      77981 |   1105
+--      17148 |    831
+--      11699 |    528
+--      63584 |    449
+--      80307 |    416
+--     150877 |    397
+
+
+--     254791 |      1
+--     255270 |      1
+--     283939 |      1
+--      60631 |      1
+-- (5155 rows)
+```
+
+Les meilleurs voisins sont calculés comme suit, ce qui sert à remplir l'attribut `ditt_noeud_ref` aujouté aux tables des POI.
+
+```sql
+-- les plus grande composantes connexes, classées par tailles relatives
+with large_cc as(
+  select
+    component,
+    count(*) as size_cc,
+    100*count(*)::numeric / (select count(*) from dittt_noeuds where component is not null) as size_pc
+  from dittt_noeuds
+  where component is not null
+  group by component
+  order by size_cc desc
+),
+
+-- calcul du noeud DITTT le plus proche du POI
+-- voir https://www.postgis.net/workshops/postgis-intro/knn.html pour le calcul
+best_neighbour as(
+  select closest.objectid as ditt_noeud_ref, closest.component as cc, poi.objectid as poi_id
+  from dimenc_centres poi join lateral
+      (select *
+        from dittt_noeuds n join large_cc using (component)
+        --- la sélection aux cc qui concernent au moins 1/1000 des p+r produit 17 composantes
+        where size_pc >= 0.1
+        order by poi.wkb_geometry <-> n.wkb_geometry
+        fetch first 1 row only
+      ) closest on true
+)
+
+select * from best_neighbour;
+
+--  ditt_noeud_ref |  cc   | poi_id 
+-- ----------------+-------+--------
+--           97042 |     1 |      1
+--          222865 |     1 |      2
+--           37912 |     1 |      3
+--           67633 |     1 |      4
+--           96789 |     1 |      5
+--          105239 |     1 |      6
+--          104243 |     1 |      7
+--          242556 |     1 |      8
+--           52227 |     1 |      9
+--           16221 |     1 |     10
+--          156743 |     1 |     11
+--          113373 |     1 |     12
+--          105975 |     1 |     13
+--           98949 |     1 |     14
+--           97478 |     1 |     15
+--           19791 |     1 |     16
+--           35694 |     1 |     17
+--           49291 |     1 |     18
+--           42759 |     1 |     19
+--           34980 |     1 |     20
+--          240175 |     1 |     21
+--          241745 |     1 |     22
+--          227242 |     1 |     23
+--          223488 |     1 |     24
+--          250645 |     1 |     25
+--          239169 |     1 |     26
+--           64463 |     1 |     27
+--           65165 |     1 |     28
+--           66036 |     1 |     29
+--          104458 |     1 |     30
+--          104020 |     1 |     31
+--           75952 | 74845 |     32
+--          219365 |     1 |     33
+--           37101 |     1 |     34
+--          236857 |     1 |     35
+--           42160 |     1 |     36
+--          256461 |     1 |     37
+--          139956 |     1 |     38
+--          240513 |     1 |     39
+--           34186 |     1 |     40
+-- (40 rows)
+```
+
+On remarque que toutes les mines sauf une seule sont dans la composante connexe numéro 1, c'est-à-dire la principale qui contient Nouméa.
+Il s'agit de la mine de Ouinné de la _Société minière Georges Montagnat_ qui est située sur la Côte Oubliée et n'est accessible **que** par la mer.
+
+Pour les POI de type établissements de santé, contrairement aux sites miniers, ceux-ci ne sont pas tous situés sur la grande terre.
+Les composantes connexes avec le nombre d'établissements concernés sont les suivantes, qui correspondent aux îles de l'archipel :
+
+```raw
+ component | count 
+-----------+-------
+         1 |  1296 // Grande-Terre
+     77981 |     3 // Ile des pins
+     81484 |     6 // Maré
+     90958 |    23 // Lifou
+    160125 |     1 // Bélep
+    171983 |     4 // Ouvéa
+(6 rows)
+```
+
+### Trajets depuis les sites miniers
 
 ## Export des résultats
 
@@ -212,8 +394,6 @@ On obtient un extrait comme suit (en supprimant la colonne de géométrie).
 
 ```bash
 neofetch  --stdout
-# romulus@cypher 
-# -------------- 
 # OS: Ubuntu 23.04 x86_64 
 # Host: Precision 5470 
 # Kernel: 6.2.0-39-generic 
@@ -247,3 +427,5 @@ psql cnrt2 -c "select pgr_version()"
 qgis --version
 # QGIS 3.38.0-Grenoble 'Grenoble' (37aa6188bc3)
 ```
+
+### Structure finale de l'ensemble des tables

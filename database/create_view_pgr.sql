@@ -25,8 +25,8 @@ CREATE MATERIALIZED VIEW dittt_segments_pgr AS(
         WHEN 'D' THEN sqrt(power(ST_Length(e.wkb_geometry), 2) + power(ST_Z(tgt.wkb_geometry) - ST_Z(src.wkb_geometry), 2)) / (1000*seg_vitess/3600)
         WHEN 'SO' THEN sqrt(power(ST_Length(e.wkb_geometry), 2) + power(ST_Z(tgt.wkb_geometry) - ST_Z(src.wkb_geometry), 2)) / (1000*seg_vitess/3600)
         ELSE -1
-    END  AS "reverse_cost",
-    e.wkb_geometry AS geom
+    END  AS "reverse_cost"
+    -- e.wkb_geometry AS geom
   FROM dittt_segments e
     JOIN dittt_noeuds src ON e.seg_noe_de = src.noe_guid
     JOIN dittt_noeuds tgt ON e.seg_noe_fi = tgt.noe_guid
