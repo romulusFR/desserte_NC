@@ -8,7 +8,7 @@ Ce document décrit le calcul du temps de trajet par la route entre les IRIS et 
 
 Le but est d'obtenir une _matrice de desserte_ où les durées trajets entre les POI et les nœuds du réseau routier sont agrégés par IRIS afin d'estimer la proximité par la route entre les POI et les IRIS.
 Un extrait indicatif (les données complètes sont fournies dans le dossier [dist](dist/)) de dix durées de trajets des usines de nickel vers les IRIS est donné ci-après.
-L'avant-dernière ligne indique qu'il faut entre 70 et 147 minutes, avec une durée médiane de 105 minutes et une moyenne de 108 minutes, pour aller de l'usine _KNS - Koniambo_ (dite _usine nord_) aux nœuds routiers situés dans l'IRIS 2306 _Aoupinié - Goro Darawé_ sur la commune de [Ponérihouen](https://fr.wikipedia.org/wiki/Pon%C3%A9rihouen).
+L'avant-dernière ligne indique qu'il faut entre 70 et 147 minutes, avec une durée médiane de 105 minutes et une moyenne de 108 minutes, pour aller de l'usine _KNS - Koniambo_ (dite _usine du nord_) aux nœuds routiers situés dans l'IRIS 2306 _Aoupinié - Goro Darawé_ sur la commune de [Ponérihouen](https://fr.wikipedia.org/wiki/Pon%C3%A9rihouen).
 
 ```raw
  Code IRIS |              Libellé IRIS              | Code commune | Société |   Site   | Durée minimum | Durée médiane | Durée moyenne | Durée maximum 
@@ -180,15 +180,15 @@ On obtient un extrait comme suit avec la requête `select * from dittt_segments_
 
 #### Trajets de référence
 
-On calcule un trajet de référence entre les deux sites de l'UNC et l'usine Nord :
+On calcule un trajet de référence entre les deux sites de l'UNC et l'usine du nord :
 
-- Noeud Nouville UNC : `objectid = 270424` (type `J`).
+- Noeud _UNC - site Nouville_ : `objectid = 270424` (type `J`).
   - Point situé au 102 Av. James Cook à Nouville, à l'intersection avec la rue Kataoui.
   - GPS : -22.2619,166.4042
-- Noeud Baco UNC : `objectid = 200545` (type `FDR`).
+- Noeud _UNC - site Baco_ : `objectid = 200545` (type `FDR`).
   - Point situé au bout du chemin entre l'UNC et la caserne de pompiers, au début de la RPN2 / Koné Tiwaka.
   - GPS : -21.0923,164.8913
-- Noeud Usine Nord : `objectid = 91270` (type `J`).
+- Noeud _usine du nord_ : `objectid = 91270` (type `J`).
   - Point situé au plus proche de celui de l'usine dans les données DIMENC, sur la piste après la RT1, au pied du four.
   - GPS : -21.0138,164.6836
 
@@ -250,7 +250,7 @@ SELECT * FROM pgr_dijkstraCostMatrix('SELECT * FROM dittt_segments_pgr', ARRAY[2
 --     270424 |  200545 | 10518.802913674612
 -- Time: 1050,469 ms (00:01,050)
 
--- de l'usine nords aux deux sites UNC
+-- de l'usine du nord aux deux sites UNC
 SELECT * FROM pgr_dijkstraCost('SELECT * FROM dittt_segments_pgr', 91270, ARRAY[270424, 200545], TRUE) AS direction;
 --  start_vid | end_vid |      agg_cost      
 -- -----------+---------+--------------------
@@ -292,7 +292,7 @@ select component, count(*) as count from dittt_noeuds group by component order b
 -- (5155 rows)
 ```
 
-Les meilleurs voisins sont calculés comme suit, ce qui sert à remplir l'attribut `ditt_noeud_ref` aujouté aux tables des POI.
+Les meilleurs voisins sont calculés comme suit, ce qui sert à remplir l'attribut `ditt_noeud_ref` ajouté aux tables des POI.
 
 ```sql
 -- les plus grande composantes connexes, classées par tailles relatives
@@ -310,12 +310,12 @@ with large_cc as(
 -- calcul du noeud DITTT le plus proche du POI
 -- voir https://www.postgis.net/workshops/postgis-intro/knn.html pour le calcul
 best_neighbour as(
-  select closest.objectid as ditt_noeud_ref, closest.component as cc, poi.objectid as poi_id
+  select closest.objectid as dittt_noeud_ref, closest.component as cc, poi.objectid as poi_id
   from dimenc_centres poi join lateral
       (select *
         from dittt_noeuds n join large_cc using (component)
-        --- la sélection aux cc qui concernent au moins 1/1000 des p+r produit 17 composantes
-        where size_pc >= 0.1
+        --- la sélection aux cc qui concernent au moins 1/10000 des p+r produit 17 composantes
+        where size_pc >= 0.01
         order by poi.wkb_geometry <-> n.wkb_geometry
         fetch first 1 row only
       ) closest on true
@@ -323,48 +323,48 @@ best_neighbour as(
 
 select * from best_neighbour;
 
---  ditt_noeud_ref |  cc   | poi_id 
--- ----------------+-------+--------
---           97042 |     1 |      1
---          222865 |     1 |      2
---           37912 |     1 |      3
---           67633 |     1 |      4
---           96789 |     1 |      5
---          105239 |     1 |      6
---          104243 |     1 |      7
---          242556 |     1 |      8
---           52227 |     1 |      9
---           16221 |     1 |     10
---          156743 |     1 |     11
---          113373 |     1 |     12
---          105975 |     1 |     13
---           98949 |     1 |     14
---           97478 |     1 |     15
---           19791 |     1 |     16
---           35694 |     1 |     17
---           49291 |     1 |     18
---           42759 |     1 |     19
---           34980 |     1 |     20
---          240175 |     1 |     21
---          241745 |     1 |     22
---          227242 |     1 |     23
---          223488 |     1 |     24
---          250645 |     1 |     25
---          239169 |     1 |     26
---           64463 |     1 |     27
---           65165 |     1 |     28
---           66036 |     1 |     29
---          104458 |     1 |     30
---          104020 |     1 |     31
---           75952 | 74845 |     32
---          219365 |     1 |     33
---           37101 |     1 |     34
---          236857 |     1 |     35
---           42160 |     1 |     36
---          256461 |     1 |     37
---          139956 |     1 |     38
---          240513 |     1 |     39
---           34186 |     1 |     40
+--  dittt_noeud_ref |  cc   | poi_id 
+-- -----------------+-------+--------
+--            97042 |     1 |      1
+--           222865 |     1 |      2
+--            37912 |     1 |      3
+--            67633 |     1 |      4
+--            96789 |     1 |      5
+--           105239 |     1 |      6
+--           104243 |     1 |      7
+--           242556 |     1 |      8
+--            52227 |     1 |      9
+--            16221 |     1 |     10
+--           156743 |     1 |     11
+--           113373 |     1 |     12
+--           105975 |     1 |     13
+--            98949 |     1 |     14
+--            97478 |     1 |     15
+--            19791 |     1 |     16
+--            35694 |     1 |     17
+--            49291 |     1 |     18
+--            42759 |     1 |     19
+--            34980 |     1 |     20
+--           240175 |     1 |     21
+--           241745 |     1 |     22
+--           227242 |     1 |     23
+--           223488 |     1 |     24
+--           250645 |     1 |     25
+--           239169 |     1 |     26
+--            64463 |     1 |     27
+--            65165 |     1 |     28
+--            66036 |     1 |     29
+--           104458 |     1 |     30
+--           104020 |     1 |     31
+--            76627 | 75918 |     32
+--           219365 |     1 |     33
+--            37101 |     1 |     34
+--           236857 |     1 |     35
+--            42160 |     1 |     36
+--           256461 |     1 |     37
+--           139956 |     1 |     38
+--           240513 |     1 |     39
+--            34186 |     1 |     40
 -- (40 rows)
 ```
 
@@ -386,13 +386,100 @@ Les composantes connexes avec le nombre d'établissements concernés sont les su
 (6 rows)
 ```
 
-### Trajets depuis les sites miniers
+On vérifie enfin que chaque `dittt_noeud_ref` ne correspond bien qu'à un seul POI dans chacune des tables.
+C'est vrai pour les sites miniers, mais **pas** pour les établissements de santés, où par exemple plusieurs praticiens peuvent exercer au même endroit.
+Il faut donc être vigilant sur les jointures avec `dittt_noeud_ref`.
+
+```sql
+select count(distinct objectid) from dimenc_usines poi where wkb_geometry is not null;
+select count(distinct dittt_noeud_ref) from dimenc_usines poi where wkb_geometry is not null;
+-- 3 et 3 : OK
+
+select count(distinct objectid) from dimenc_centres poi where wkb_geometry is not null;
+select count(distinct dittt_noeud_ref) from dimenc_centres poi where wkb_geometry is not null;
+-- 40 et 40 : OK
+
+select count(distinct fid_etab) from dass_etabs_sante poi where wkb_geometry is not null;
+select count(distinct dittt_noeud_ref) from dass_etabs_sante poi where wkb_geometry is not null;
+-- 1333 et 763 : KO /!\
+```
+
+#### Distances entre POI et noeuds DITTT
+
+On vérifie que les distances entre les coordonnées d'origines des POI et les nœuds de référence sont raisonnables.
+
+```sql
+SELECT poi.site, ROUND(poi.wkb_geometry <-> n.wkb_geometry) AS distance_m
+FROM dimenc_usines poi JOIN dittt_noeuds n ON poi.dittt_noeud_ref = n.objectid
+ORDER BY distance_m DESC;
+
+SELECT poi.site_minie, ROUND(poi.wkb_geometry <-> n.wkb_geometry) AS distance_m
+FROM dimenc_centres poi JOIN dittt_noeuds n ON poi.dittt_noeud_ref = n.objectid
+ORDER BY distance_m DESC;
+
+SELECT poi.denominatio, ROUND(poi.wkb_geometry <-> n.wkb_geometry) AS distance_m
+FROM dass_etabs_sante poi JOIN dittt_noeuds n ON poi.dittt_noeud_ref = n.objectid
+ORDER BY distance_m DESC;
+
+--    site   | distance_m 
+-- ----------+------------
+--  Goro     |        208
+--  Doniambo |        136
+--  Koniambo |         76
+
+--           site_minie          | distance_m 
+-- ------------------------------+------------
+--  KOUE                         |        238
+--  VERSE RACHEL                 |        138
+--  THIO PLATEAU                 |        121
+--  KADJITRA                     |        105
+--  KOPETO                       |        100
+--  MICHEL 38                    |         96
+--  ALICE-PHILIPPE               |         77
+--  TIEBAGHI                     |         69
+--  KOUAOUA MEA-KIEL-DOUMA       |         63
+--  PORO BONINI                  |         63
+--  OUACO TAOM                   |         63
+--  BOGOTA SUIVANTE-BIENVENUE    |         55
+--  GRAZIELLA                    |         54
+--  PINPIN 1B                    |         54
+--  DOTHIO                       |         53
+--  BOUALOUDJELIMA               |         50
+--  OUACO OUAZANGOU              |         50
+--  BOGOTA EARLY DOWN-NIGL       |         43
+--  PORO FRANCAISE               |         40
+--  THIO CAMP DES SAPINS         |         40
+--  CAP BOCAGE                   |         38
+--  PB2 carrière basse           |         37
+--  NAKETY EDOUARD-EUREKA-CIRCEE |         37
+--  OUINNE                       |         37
+--  MICHEL 37                    |         35
+--  PINPIN 1A                    |         35
+--  OPOUE                        |         33
+--  NAKETY PLATEAU               |         33
+--  GORO                         |         31
+--  CLAUDE ET PHILOMENE          |         30
+--  STAMBOUL                     |         29
+--  NAKETY LUCIENNE              |         28
+--  POUM                         |         28
+--  KONIAMBO                     |         25
+--  TUNNEY                       |         19
+--  TOMO-SMMO 43                 |         18
+--  ADA                          |         16
+--  ETOILE DU NORD               |         14
+--  VULCAIN                      |         12
+--  OUALA CARRIERE C             |         11
+```
+
+### Desserte depuis les POI
 
 On va utiliser [la famille des fonctions de calcul de plus courts chemins basées sur l'algorithme de Dijkstra](https://docs.pgrouting.org/3.6/en/dijkstra-family.html) pour le calcul de desserte, lesquelles sont [issue de la Boost Graph Library](https://www.boost.org/doc/libs/1_85_0/libs/graph/doc/dijkstra_shortest_paths.html).
 
 On calcule le temps de trajet _de chaque POI **vers** les nœuds DITTT_ (et non pas _des nœuds un à un vers les POI_) avec [pgr_dijkstraCost](https://docs.pgrouting.org/3.6/en/pgr_dijkstraCost.html) car sa complexité [est proportionnelle au nombre de sources](https://docs.pgrouting.org/3.6/en/pgr_dijkstraCost.html), mais en revanche [la complexité n'est pas meilleure avec une seule destination qu'avec plusieurs](https://www.boost.org/doc/libs/1_85_0/libs/graph/doc/graph_theory_review.html#sec:shortest-paths-algorithms).
 
-La requête suivante liste tous les couples _(source, destination)_ depuis le POI 9127 (l'usine Nord) vers les nœuds _carrossables_ de l'IRIS de Farino. _Carrossable_ signifiant qu'il y a au moins un segment de route relié à ce nnœud de type `VCU`, `VCS`, `B`, `VR`, `A`, `RP` (hors noœuds de type piste `P`).
+#### Exemple entre l'usine du nord et les nœuds de Farino
+
+La requête suivante liste tous les couples _(source, destination)_ depuis le POI 9127 (l'usine du nord) vers les nœuds _carrossables_ de l'IRIS de Farino. _Carrossable_ signifiant qu'il y a au moins un segment de route relié à ce nnœud de type `VCU`, `VCS`, `B`, `VR`, `A`, `RP` (hors nœuds de type piste `P`).
 
 ```sql
 with carrossable as (
@@ -416,8 +503,9 @@ where lib_iris = 'Farino' and n.objectid in (select * from carrossable);
 -- 664, Farino comptant 44.4% de segments de route de type piste
 ```
 
-On peut utiliser cette requête pour calculer toutes les durées de trajet de l'usine Nord vers les nœuds de Farino, on obtient ainsi des durées de travers entre 113.5 et 133.9 minutes, avec une moyenne de 120 minutes, ce qui paraît cohérent, compte tenu du léger optimisme des durées de trajets vérifiées précédemment.
-Voir [le fichier SQL](database/select_trajet_nord_vers_farino.sql)
+On peut utiliser cette requête pour calculer toutes les durées de trajet de l'usine du nord vers les nœuds de Farino, on obtient ainsi des durées de travers entre 113.5 et 133.9 minutes, avec une moyenne de 120 minutes, ce qui paraît cohérent, compte tenu du léger optimisme des durées de trajets vérifiées précédemment.
+Voir [le fichier SQL](database/select_trajet_nord_vers_farino.sql).
+Notons qu'on utilise les [chaînes de caractères SQL sur plusieurs lignes](https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS).
 
 ```sql
 SELECT *
@@ -438,6 +526,57 @@ FROM pgr_dijkstraCost(
     'from dittt_noeuds n join cnrt_iris i on st_contains(i.wkb_geometry, n.wkb_geometry) '
     'where lib_iris = ''Farino'' and n.objectid in (select * from carrossable);',
     TRUE) AS direction;
+```
+
+### Table des dessertes
+
+On exécute le fichier [create_table_desserte.sql](database/create_table_desserte.sql) pour créer une table `desserte_poi` des résultats intermédiaires comme suit, où on utilise le nom de la table des POI comme valeur de `poi_type`.
+
+```raw
+             Table "public.desserte_poi"
+  Column  |  Type   | Collation | Nullable | Default 
+----------+---------+-----------+----------+---------
+ source   | integer |           | not null | 
+ poi_type | text    |           | not null | 
+ poi_id   | integer |           | not null | 
+ target   | integer |           | not null | 
+ cost     | numeric |           |          | 
+Indexes:
+    "desserte_poi_pkey" PRIMARY KEY, btree (poi_type, poi_id, target)
+Check constraints:
+    "desserte_poi_poi_type_check" CHECK (poi_type = ANY (ARRAY['dimenc_usines'::text, 'dimenc_centres'::text, 'dass_etabs_sante'::text]))
+Foreign-key constraints:
+    "desserte_poi_source_fkey" FOREIGN KEY (source) REFERENCES dittt_noeuds(objectid)
+    "desserte_poi_target_fkey" FOREIGN KEY (target) REFERENCES dittt_noeuds(objectid)
+```
+
+On ne va considérer que les destinations qui sont des extrémités de segments de route.
+
+```sql
+WITH routes AS (
+  SELECT DISTINCT source FROM dittt_segments_pgr WHERE seg_type = 'R'
+  UNION
+  SELECT DISTINCT target FROM dittt_segments_pgr WHERE seg_type = 'R'
+)
+SELECT count(*) FROM dimenc_usines poi CROSS JOIN routes;
+--  75209 dont 61130 dans la composante 1 
+```
+
+On reprend la requête de la [section précédente](#desserte-depuis-les-poi) pour matérialiser le résultat dans `desserte_poi`.
+On prend soin d'ouvrir les jointures pour bien avoir tous les couples avec un coût `NULL` qui représente les valeurs infinies, quand il n'y a pas de trajet.
+Par exemple, les trajets des usines vers les nœuds dans les IRIS des îles (Loyautés, Bélep ou des Pins) doivent être tous infinis.
+
+```sql
+WITH dans_iles AS(
+  SELECT n.objectid
+  FROM dittt_noeuds n JOIN cnrt_iris i ON st_contains(i.wkb_geometry, n.wkb_geometry)
+  WHERE i.nom_com IN ('BELEP', 'ILE DES PINS', 'LIFOU', 'MARE', 'OUVEA')
+)
+
+SELECT *
+FROM desserte_poi
+WHERE target IN (SELECT * FROM dans_iles) AND cost IS NOT NULL AND poi_type IN ('dimenc_usines', 'dimenc_centres');
+-- (0 rows)
 ```
 
 ## Export des résultats
