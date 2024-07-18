@@ -1,5 +1,7 @@
 -- les 3 requêtes sont similaires, mais on duplique le code car les tables des POI sont différentes
 
+
+--------------------------------
 -- POI = usines
 ALTER TABLE dimenc_usines ADD COLUMN dittt_noeud_ref integer REFERENCES dittt_noeuds(objectid);
 
@@ -34,10 +36,11 @@ set dittt_noeud_ref = n.ditt_noeud_ref
 from best_neighbour n
 where n.poi_id = dimenc_usines.objectid;
 
+
+--------------------------------
 -- POI = centres miniers (mines)
 ALTER TABLE dimenc_centres ADD COLUMN dittt_noeud_ref integer REFERENCES dittt_noeuds(objectid);
 
--- les plus grande composantes connexes, classées par tailles relatives
 with large_cc as(
   select
     component,
@@ -49,14 +52,11 @@ with large_cc as(
   order by size_cc desc
 ),
 
--- calcul du noeud DITTT le plus proche du POI
--- voir https://www.postgis.net/workshops/postgis-intro/knn.html pour le calcul
 best_neighbour as(
   select closest.objectid as ditt_noeud_ref, closest.component as cc, poi.objectid as poi_id
   from dimenc_centres poi join lateral
       (select *
         from dittt_noeuds n join large_cc using (component)
-        --- la sélection aux cc qui concernent au moins 1/1000 des p+r produit 17 composantes
         where size_pc >= 0.1
         order by poi.wkb_geometry <-> n.wkb_geometry
         fetch first 1 row only
@@ -69,12 +69,10 @@ from best_neighbour n
 where n.poi_id = dimenc_centres.objectid;
 
 
-
-
+--------------------------------
 -- POI = établissements de santé
 ALTER TABLE dass_etabs_sante ADD COLUMN dittt_noeud_ref integer REFERENCES dittt_noeuds(objectid);
 
--- les plus grande composantes connexes, classées par tailles relatives
 with large_cc as(
   select
     component,
@@ -86,14 +84,11 @@ with large_cc as(
   order by size_cc desc
 ),
 
--- calcul du noeud DITTT le plus proche du POI
--- voir https://www.postgis.net/workshops/postgis-intro/knn.html pour le calcul
 best_neighbour as(
   select closest.objectid as ditt_noeud_ref, closest.component as cc, poi.fid_etab as poi_id
   from dass_etabs_sante poi join lateral
       (select *
         from dittt_noeuds n join large_cc using (component)
-        --- la sélection aux cc qui concernent au moins 1/1000 des p+r produit 17 composantes
         where size_pc >= 0.1
         order by poi.wkb_geometry <-> n.wkb_geometry
         fetch first 1 row only

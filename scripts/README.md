@@ -8,4 +8,4 @@ Les scripts sont exécutés dans l'ordre.
 - `01_download.sh` téléchargement des données sources, liens valables le 2024-07-16.
 - `02_import_pg.sh` chargement des données dans la base PostgreSQL.
 - `03_cleaning.sh` ajout de clefs primaires et étrangères.
-- `04_prepare_pgr.sh` création de la vue matérialisée pour pgRouting.
+- `04_prepare_pgr.sh` création de la vue matérialisée pour pgRouting et modifications préparatoires des tables pour les calculs des dessertes.

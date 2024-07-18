@@ -128,6 +128,8 @@ ORDER BY i.code_iris ASC;
 --  0504      | Koutio érudits                                   |         86 |         207 |         4 |      1.93 |            2.41
 --  0505      | Koutio Fortunes de mer                           |         77 |         124 |         2 |      1.61 |            1.62
 --  0506      | Jacarandas I                                     |        188 |         127 |        13 |     10.24 |            0.68
+--  0601      | Farino                                           |       4807 |        1232 |       547 |     44.40 |            0.26
+
 ```
 
 #### La longueur de la R.T.1 : 402 km
@@ -144,9 +146,9 @@ WHERE nom_code = 'R.T.1';
 
 ## Calcul des trajets avec `pgRouting`
 
-Voir le fichier [04_prepare_pgr.sh](scripts/04_prepare_pgr.sh) qui exécute les programmes SQL de cette section.
+Voir le fichier [04_prepare_pgr.sh](scripts/04_prepare_pgr.sh) qui exécute les programmes SQL des trois premières sections.
 
-### Préparation
+### Vue des segments au format `pgRouting`
 
 On crée une vue _matérialisée_ `dittt_segments_pgr` qui structure les données sources au [format attendu par `pgRouting`](https://docs.pgrouting.org/3.6/en/pgr_dijkstraNearCost.html#edges-sql).
 On prend en compte la direction des segments, la pente et la vitesse maximale autorisée dans le calcul des coûts.
@@ -370,7 +372,7 @@ On remarque que toutes les mines sauf une seule sont dans la composante connexe 
 Il s'agit de la mine de Ouinné de la _Société minière Georges Montagnat_ qui est située sur la Côte Oubliée et n'est accessible **que** par la mer.
 
 Pour les POI de type établissements de santé, contrairement aux sites miniers, ceux-ci ne sont pas tous situés sur la grande terre.
-Les composantes connexes avec le nombre d'établissements concernés sont les suivantes, qui correspondent aux îles de l'archipel :
+Les composantes connexes avec le nombre d'établissements concernés sont les suivantes, qui correspondent aux îles de l'archipel. Ci-dessous [le résultat de la requête](database/select_best_neighbour_component_sante.sql) commenté :
 
 ```raw
  component | count 
@@ -385,6 +387,58 @@ Les composantes connexes avec le nombre d'établissements concernés sont les su
 ```
 
 ### Trajets depuis les sites miniers
+
+On va utiliser [la famille des fonctions de calcul de plus courts chemins basées sur l'algorithme de Dijkstra](https://docs.pgrouting.org/3.6/en/dijkstra-family.html) pour le calcul de desserte, lesquelles sont [issue de la Boost Graph Library](https://www.boost.org/doc/libs/1_85_0/libs/graph/doc/dijkstra_shortest_paths.html).
+
+On calcule le temps de trajet _de chaque POI **vers** les nœuds DITTT_ (et non pas _des nœuds un à un vers les POI_) avec [pgr_dijkstraCost](https://docs.pgrouting.org/3.6/en/pgr_dijkstraCost.html) car sa complexité [est proportionnelle au nombre de sources](https://docs.pgrouting.org/3.6/en/pgr_dijkstraCost.html), mais en revanche [la complexité n'est pas meilleure avec une seule destination qu'avec plusieurs](https://www.boost.org/doc/libs/1_85_0/libs/graph/doc/graph_theory_review.html#sec:shortest-paths-algorithms).
+
+La requête suivante liste tous les couples _(source, destination)_ depuis le POI 9127 (l'usine Nord) vers les nœuds _carrossables_ de l'IRIS de Farino. _Carrossable_ signifiant qu'il y a au moins un segment de route relié à ce nnœud de type `VCU`, `VCS`, `B`, `VR`, `A`, `RP` (hors noœuds de type piste `P`).
+
+```sql
+with carrossable as (
+  select distinct source
+  from dittt_segments_pgr
+  where seg_type = 'R'
+  
+  union
+  
+  select distinct target
+  from dittt_segments_pgr
+  where seg_type = 'R'
+)
+
+select 
+  91270::integer as "source",
+  objectid::integer as "target"
+from dittt_noeuds n join cnrt_iris i on st_contains(i.wkb_geometry, n.wkb_geometry)
+where lib_iris = 'Farino' and n.objectid in (select * from carrossable);
+
+-- 664, Farino comptant 44.4% de segments de route de type piste
+```
+
+On peut utiliser cette requête pour calculer toutes les durées de trajet de l'usine Nord vers les nœuds de Farino, on obtient ainsi des durées de travers entre 113.5 et 133.9 minutes, avec une moyenne de 120 minutes, ce qui paraît cohérent, compte tenu du léger optimisme des durées de trajets vérifiées précédemment.
+Voir [le fichier SQL](database/select_trajet_nord_vers_farino.sql)
+
+```sql
+SELECT *
+FROM pgr_dijkstraCost(
+    'select * from dittt_segments_pgr',
+    'with carrossable as ( '
+    'select distinct source '
+    'from dittt_segments_pgr '
+    'where seg_type = ''R'' '
+    'union '
+    'select distinct target '
+    'from dittt_segments_pgr '
+    'where seg_type = ''R'' '
+    ') '
+    'select '
+    '  91270::integer as "source", '
+    '  objectid::integer as "target" '
+    'from dittt_noeuds n join cnrt_iris i on st_contains(i.wkb_geometry, n.wkb_geometry) '
+    'where lib_iris = ''Farino'' and n.objectid in (select * from carrossable);',
+    TRUE) AS direction;
+```
 
 ## Export des résultats
 
