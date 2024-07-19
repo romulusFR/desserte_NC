@@ -56,5 +56,6 @@ INSERT INTO desserte_poi
     );
 
 -- INSERT 0 8686864
+-- Time: 122602,529 ms (02:02,603)
 -- Time: 119123,682 ms (01:59,124)
--- soit 0.794 sec / POI
+-- environ 0.80 sec / POI

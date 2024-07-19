@@ -559,7 +559,8 @@ WHERE target IN (SELECT * FROM dans_iles) AND cost IS NOT NULL AND poi_type IN (
 
 #### Traitement des masses de POI
 
-Si le nombre de POI est trop important, `pgRouting` peut avoir des difficultés à allouer la RAM et faillier avec l'erreur `ERROR:  XX000: invalid memory alloc request size ...`.
+Si le nombre de POI est trop important, `pgRouting` peut avoir des difficultés à allouer la RAM et faillir avec l'erreur `ERROR:  XX000: invalid memory alloc request size ...`.
+Il faut alors décomposer la requête avec un **plus petit nombre de sources** dans `pgr_dijkstraCost` en insérant les résultats partiels à `desserte_poi`.
 
 ```sql
 -- regroupés par IRIS
@@ -629,8 +630,110 @@ order by nb desc;
 --  Grossiste Pharmacie                  |   1
 --  Rhumatologie                         |   1
 -- (53 rows)
-
 ```
+
+### Agrégation des coûts de desserte
+
+À ce stade, on dispose des données comme suit :
+
+```sql
+select * from desserte_poi  tablesample bernoulli(0.0001);
+
+--  source |     poi_type     | poi_id | target |       cost       
+-- --------+------------------+--------+--------+------------------
+--  255591 | dimenc_usines    |      2 |  45902 | 13630.6480324089
+--  255591 | dimenc_usines    |      2 | 208413 | 9186.45815349257
+--   16221 | dimenc_centres   |     10 | 266726 | 10162.8992229618
+--  240513 | dimenc_centres   |     39 |   6129 | 6057.68715568927
+--  250645 | dimenc_centres   |     25 |  60992 | 4725.77615258666
+--   62373 | dass_etabs_sante |     56 | 221287 | 4108.01902108972
+--   67073 | dass_etabs_sante |    893 | 135230 |  12524.410304495
+--   68769 | dass_etabs_sante |   1319 | 248178 |  7502.6703178984
+--  102196 | dass_etabs_sante |    497 | 273203 | 13505.7066416541
+--  130905 | dass_etabs_sante |    491 |   8554 | 4402.86088536708
+--  183892 | dass_etabs_sante |    876 | 127981 | 4486.75010213858
+--  201237 | dass_etabs_sante |   1344 | 189270 | 6144.08622839343
+--  261994 | dass_etabs_sante |    428 | 207591 | 4548.99162270812
+--  268066 | dass_etabs_sante |    702 | 137832 | 12327.7803503244
+--  274068 | dass_etabs_sante |   1148 |  40154 | 8949.51372466605
+--  275933 | dass_etabs_sante |    217 | 218002 | 2203.91839249472
+
+
+select poi_type, poi_id, count(*)
+from desserte_poi
+group by poi_type, poi_id
+order by poi_type desc, poi_id;
+
+--     poi_type     | poi_id | count 
+-- ------------------+--------+-------
+--  dimenc_usines    |      1 | 64060
+--  dimenc_usines    |      2 | 64061
+--  dimenc_usines    |      3 | 64060
+--  dimenc_centres   |      1 | 64060
+--  dimenc_centres   |      2 | 64060
+--  dimenc_centres   |      3 | 64061
+--  dimenc_centres   |      4 | 64060
+--  dimenc_centres   |      5 | 64061
+--  dimenc_centres   |      6 | 64060
+--  dimenc_centres   |      7 | 64061
+--  dimenc_centres   |      8 | 64061
+--  dimenc_centres   |      9 | 64061
+--  dimenc_centres   |     10 | 64061
+--  dimenc_centres   |     11 | 64060
+--  dimenc_centres   |     12 | 64061
+--  dimenc_centres   |     13 | 64060
+--  dimenc_centres   |     14 | 64060
+--  dimenc_centres   |     15 | 64061
+--  dimenc_centres   |     16 | 64061
+--  dimenc_centres   |     17 | 64061
+--  dimenc_centres   |     18 | 64061
+--  dimenc_centres   |     19 | 64061
+--  dimenc_centres   |     20 | 64061
+--  dimenc_centres   |     21 | 64061
+--  dimenc_centres   |     22 | 64061
+--  dimenc_centres   |     23 | 64061
+--  dimenc_centres   |     24 | 64061
+--  dimenc_centres   |     25 | 64061
+--  dimenc_centres   |     26 | 64061
+--  dimenc_centres   |     27 | 64060
+--  dimenc_centres   |     28 | 64061
+--  dimenc_centres   |     29 | 64061
+--  dimenc_centres   |     30 | 64061
+--  dimenc_centres   |     31 | 64060
+--  dimenc_centres   |     32 |    32
+--  dimenc_centres   |     33 | 64061
+--  dimenc_centres   |     34 | 64061
+--  dimenc_centres   |     35 | 64061
+--  dimenc_centres   |     36 | 64060
+--  dimenc_centres   |     37 | 64061
+--  dimenc_centres   |     38 | 64061
+--  dimenc_centres   |     39 | 64061
+--  dimenc_centres   |     40 | 64061
+--  dass_etabs_sante |      7 | 64060
+--  dass_etabs_sante |      8 | 64060
+--  dass_etabs_sante |      9 |  1555
+--  dass_etabs_sante |     10 | 64060
+--  dass_etabs_sante |     14 | 64060
+--  dass_etabs_sante |     15 | 64060
+--  dass_etabs_sante |     16 |  1555
+--  dass_etabs_sante |     17 | 64061
+--  dass_etabs_sante |     18 | 64060
+--  dass_etabs_sante |     19 |    53
+--  dass_etabs_sante |     23 | 64060
+--  dass_etabs_sante |     27 | 64060
+--  dass_etabs_sante |     39 |  3560
+--  dass_etabs_sante |     41 | 64061
+--  dass_etabs_sante |     49 |  4373
+--  dass_etabs_sante |     50 |  4373
+--  dass_etabs_sante |     55 | 64060
+-- ...
+```
+
+Pour calculer les matrices de dessertes des POI, il suffit d'agréger les destinations de la table `desserte_poi` par unité géographique comme les IRIS ou les communes.
+On exporte les données dans un format appelé _normalisé_ en bases de données ou _tidy_ dans la communauté R (voir [tidyr.tidyverse.org](https://tidyr.tidyverse.org/articles/tidy-data.html)) qui est le plus agréable à utiliser programmatiquement.
+On propose aussi une version pivotée en largeur pour un usage humain.
+
+⚠️ ici mettre au point la requête d'agrégation avec l'ouverture pour bien avoir |poi|*|iris| lignes ⚠️
 
 ## Export des résultats
 
