@@ -1,0 +1,304 @@
+nom_com,type_etabli,nb
+BELEP,Dispensaire,1
+BOULOUPARIS,Ambulance,2
+BOULOUPARIS,Cabinet médical,3
+BOULOUPARIS,Imagerie médicale,1
+BOULOUPARIS,Infirmiers,6
+BOULOUPARIS,Kinésithérapie,3
+BOULOUPARIS,Pharmacie,1
+BOURAIL,Ambulance,6
+BOURAIL,Cabinet dentaire,2
+BOURAIL,Cabinet médical,4
+BOURAIL,Cardiologie,1
+BOURAIL,Dialyse,1
+BOURAIL,Dispensaire,1
+BOURAIL,Etab personnes agées,1
+BOURAIL,Imagerie médicale,1
+BOURAIL,Infirmiers,10
+BOURAIL,Kinésithérapie,5
+BOURAIL,Laboratoire,1
+BOURAIL,Opticiens,1
+BOURAIL,Orthophonie,4
+BOURAIL,Ostéopathie,1
+BOURAIL,Pharmacie,1
+BOURAIL,Pneumologie,1
+BOURAIL,Sage-Femme,1
+BOURAIL,,2
+CANALA,Ambulance,2
+CANALA,Dispensaire,1
+CANALA,Infirmiers,1
+CANALA,Pharmacie,1
+CANALA,,2
+DUMBEA,Ambulance,4
+DUMBEA,Audioprothésiste,2
+DUMBEA,Cabinet dentaire,11
+DUMBEA,Cabinet médical,23
+DUMBEA,Cardiologie,1
+DUMBEA,Centre médico-psychologique (CMP),1
+DUMBEA,Dialyse,2
+DUMBEA,Dispensaire,1
+DUMBEA,Etab personnes agées,3
+DUMBEA,Hôpitaux,2
+DUMBEA,Imagerie médicale,2
+DUMBEA,Infirmiers,26
+DUMBEA,Kinésithérapie,9
+DUMBEA,Laboratoire,3
+DUMBEA,Matériel médical,4
+DUMBEA,Ophtalmologie,2
+DUMBEA,Opticiens,9
+DUMBEA,Orthodontie,1
+DUMBEA,Orthophonie,7
+DUMBEA,Ostéopathie,8
+DUMBEA,Oxygène médical,1
+DUMBEA,Pharmacie,8
+DUMBEA,Psychiatrie,2
+DUMBEA,Sage-Femme,2
+DUMBEA,,5
+FARINO,,1
+HIENGHENE,Ambulance,2
+HIENGHENE,Dispensaire,1
+HIENGHENE,Infirmiers,1
+HIENGHENE,Kinésithérapie,1
+HIENGHENE,Pharmacie,1
+HIENGHENE,,2
+HOUAILOU,Ambulance,2
+HOUAILOU,Cabinet médical,1
+HOUAILOU,Dispensaire,1
+HOUAILOU,Infirmiers,1
+HOUAILOU,Kinésithérapie,1
+HOUAILOU,Pharmacie,1
+HOUAILOU,,4
+ILE DES PINS,Dispensaire,1
+ILE DES PINS,Kinésithérapie,1
+ILE DES PINS,Pharmacie,1
+ILE DES PINS,,1
+KAALA GOMEN,Ambulance,1
+KAALA GOMEN,Dispensaire,1
+KAALA GOMEN,Pharmacie,1
+KAALA GOMEN,,2
+KONE,Ambulance,2
+KONE,Cabinet dentaire,4
+KONE,Cabinet médical,3
+KONE,Cardiologie,1
+KONE,Collect. Terr. et Etat,2
+KONE,Dispensaire,1
+KONE,Hôpitaux,1
+KONE,Infirmiers,6
+KONE,Kinésithérapie,2
+KONE,Laboratoire,1
+KONE,Matériel médical,2
+KONE,Médecine du travail,1
+KONE,Ophtalmologie,1
+KONE,Opticiens,2
+KONE,Orthophonie,1
+KONE,Orthoptie,1
+KONE,Ostéopathie,1
+KONE,Pharmacie,2
+KONE,Psychiatrie,1
+KONE,Sage-Femme,3
+KONE,,3
+KOUAOUA,Ambulance,1
+KOUAOUA,Dispensaire,1
+KOUAOUA,,1
+KOUMAC,Ambulance,3
+KOUMAC,Cabinet dentaire,2
+KOUMAC,Cabinet médical,2
+KOUMAC,Centre médico-psychologique (CMP),1
+KOUMAC,Collect. Terr. et Etat,1
+KOUMAC,Etab personnes agées,1
+KOUMAC,Hôpitaux,1
+KOUMAC,Infirmiers,5
+KOUMAC,Kinésithérapie,7
+KOUMAC,Pharmacie,1
+KOUMAC,,2
+LA FOA,Ambulance,1
+LA FOA,Cabinet dentaire,2
+LA FOA,Cabinet médical,3
+LA FOA,Dialyse,1
+LA FOA,Dispensaire,1
+LA FOA,Etab personnes agées,1
+LA FOA,Infirmiers,5
+LA FOA,Kinésithérapie,8
+LA FOA,Ophtalmologie,1
+LA FOA,Opticiens,2
+LA FOA,Orthophonie,3
+LA FOA,Pharmacie,1
+LA FOA,Sage-Femme,2
+LA FOA,,1
+LIFOU,Ambulance,2
+LIFOU,Cabinet médical,2
+LIFOU,Collect. Terr. et Etat,1
+LIFOU,Dispensaire,3
+LIFOU,Infirmiers,6
+LIFOU,Kinésithérapie,5
+LIFOU,Orthophonie,1
+LIFOU,Pharmacie,2
+LIFOU,Psychiatrie,1
+MARE,Ambulance,2
+MARE,Dispensaire,2
+MARE,Kinésithérapie,1
+MARE,Pharmacie,1
+MOINDOU,Infirmiers,2
+MONT DORE,Ambulance,4
+MONT DORE,Cabinet dentaire,10
+MONT DORE,Cabinet médical,18
+MONT DORE,Cardiologie,1
+MONT DORE,Centre médico-psychologique (CMP),1
+MONT DORE,Dispensaire,1
+MONT DORE,Etab personnes agées,4
+MONT DORE,Etab personnes handicapées,2
+MONT DORE,Imagerie médicale,1
+MONT DORE,Infirmiers,32
+MONT DORE,Kinésithérapie,9
+MONT DORE,Laboratoire,2
+MONT DORE,Opticiens,1
+MONT DORE,Orthodontie,1
+MONT DORE,Orthophonie,16
+MONT DORE,Ostéopathie,4
+MONT DORE,Pharmacie,8
+MONT DORE,Podologie,1
+MONT DORE,Psychiatrie,2
+MONT DORE,Sage-Femme,2
+MONT DORE,,3
+NOUMEA,Allergologie,1
+NOUMEA,Ambulance,7
+NOUMEA,Anesthésie,2
+NOUMEA,Angiologie,3
+NOUMEA,Audioprothésiste,7
+NOUMEA,Cabinet chiropractique,3
+NOUMEA,Cabinet de Diététique/Nutritionniste,7
+NOUMEA,Cabinet dentaire,60
+NOUMEA,Cabinet médical,105
+NOUMEA,Cabinet ORL,5
+NOUMEA,Cardiologie,5
+NOUMEA,Centre médico-psychologique (CMP),1
+NOUMEA,Chirurgie,8
+NOUMEA,Collect. Terr. et Etat,10
+NOUMEA,Dermatologie,8
+NOUMEA,Dialyse,2
+NOUMEA,Dispensaire,4
+NOUMEA,Endocrinologie,3
+NOUMEA,Entreprises autres,4
+NOUMEA,Etab personnes agées,7
+NOUMEA,Etab personnes handicapées,12
+NOUMEA,Gastro-Entérologie,2
+NOUMEA,Gériatrie,1
+NOUMEA,Grossiste Pharmacie,1
+NOUMEA,Gynécologie,12
+NOUMEA,Hôpitaux,3
+NOUMEA,Imagerie médicale,3
+NOUMEA,Infirmiers,82
+NOUMEA,Kinésithérapie,65
+NOUMEA,Laboratoire,11
+NOUMEA,Matériel médical,16
+NOUMEA,Médecine du travail,1
+NOUMEA,Néphrologie,1
+NOUMEA,Neurologie,4
+NOUMEA,Ophtalmologie,7
+NOUMEA,Opticiens,27
+NOUMEA,Orthophonie,63
+NOUMEA,Orthoptie,7
+NOUMEA,Ostéopathie,44
+NOUMEA,Oxygène médical,2
+NOUMEA,Pédiatrie,5
+NOUMEA,Pharmacie,24
+NOUMEA,Pneumologie,2
+NOUMEA,Podologie,17
+NOUMEA,Psychiatrie,12
+NOUMEA,Rhumatologie,1
+NOUMEA,Sage-Femme,17
+NOUMEA,Stomatologie,1
+NOUMEA,Urologie,3
+NOUMEA,,6
+OUEGOA,Ambulance,1
+OUEGOA,Dispensaire,1
+OUEGOA,Infirmiers,2
+OUEGOA,Pharmacie,1
+OUEGOA,,2
+OUVEA,Ambulance,1
+OUVEA,Dispensaire,2
+OUVEA,Pharmacie,1
+OUVEA,,1
+PAITA,Ambulance,3
+PAITA,Autres,1
+PAITA,Cabinet dentaire,8
+PAITA,Cabinet médical,10
+PAITA,Cardiologie,1
+PAITA,Dispensaire,1
+PAITA,Etab personnes agées,2
+PAITA,Imagerie médicale,2
+PAITA,Infirmiers,21
+PAITA,Kinésithérapie,7
+PAITA,Laboratoire,1
+PAITA,Orthodontie,1
+PAITA,Orthophonie,13
+PAITA,Ostéopathie,3
+PAITA,Oxygène médical,2
+PAITA,Pharmacie,6
+PAITA,Pneumologie,1
+PAITA,Sage-Femme,6
+PAITA,,4
+POINDIMIE,Ambulance,3
+POINDIMIE,Cabinet dentaire,1
+POINDIMIE,Cabinet médical,2
+POINDIMIE,Dispensaire,1
+POINDIMIE,Hôpitaux,2
+POINDIMIE,Infirmiers,2
+POINDIMIE,Kinésithérapie,1
+POINDIMIE,Orthophonie,1
+POINDIMIE,Pharmacie,1
+POINDIMIE,Psychiatrie,1
+POINDIMIE,,2
+PONERIHOUEN,Ambulance,1
+PONERIHOUEN,Dispensaire,1
+PONERIHOUEN,Kinésithérapie,2
+PONERIHOUEN,Pharmacie,1
+PONERIHOUEN,,2
+POUEBO,Ambulance,2
+POUEBO,Dispensaire,1
+POUEBO,Pharmacie,1
+POUEBO,,1
+POUEMBOUT,Ambulance,1
+POUEMBOUT,Cabinet dentaire,1
+POUEMBOUT,Cabinet médical,1
+POUEMBOUT,Infirmiers,1
+POUEMBOUT,Kinésithérapie,2
+POUEMBOUT,Ostéopathie,2
+POUEMBOUT,Pharmacie,2
+POUM,Ambulance,1
+POUM,Dispensaire,1
+POUM,,1
+POYA,Ambulance,3
+POYA,Dispensaire,1
+POYA,Infirmiers,1
+POYA,Kinésithérapie,1
+POYA,Pharmacie,1
+POYA,,1
+SARRAMEA,,1
+THIO,Ambulance,2
+THIO,Cabinet dentaire,2
+THIO,Dispensaire,1
+THIO,Infirmiers,2
+THIO,Kinésithérapie,1
+THIO,Pharmacie,1
+THIO,,2
+TOUHO,Ambulance,1
+TOUHO,Dispensaire,1
+TOUHO,Kinésithérapie,1
+TOUHO,Pharmacie,1
+TOUHO,,1
+VOH,Ambulance,1
+VOH,Cabinet médical,1
+VOH,Dispensaire,1
+VOH,Entreprises autres,1
+VOH,Infirmiers,2
+VOH,Kinésithérapie,2
+VOH,Pharmacie,1
+VOH,Sage-Femme,1
+VOH,,2
+YATE,Ambulance,1
+YATE,Dispensaire,1
+YATE,Infirmiers,2
+YATE,Kinésithérapie,1
+YATE,Pharmacie,1
+YATE,,2
