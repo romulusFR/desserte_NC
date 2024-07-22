@@ -35,7 +35,17 @@ L'intégralité des code est fournie dans le présent dépôt, pour pouvoir repr
 
 ## Documents produits
 
-Les fichiers suivants sont diffusés dans le cadre de cette étude
+Les fichiers suivants sont diffusés dans le cadre de cette étude :
 
-- [cnrt_iris_2014.zip](./cnrt_iris_2014.zip) les IRIS utilisés dans le projet CNRT Mines et Territoires, au format _ESRI Shapefile_.
-- [nb_etab_sante_par_type_commune.csv](./nb_etab_sante_par_type_commune.csv) le nombre d'établissements de santé par commune.
+- [cnrt_iris_2014.zip](dist/cnrt_iris_2014.zip) les IRIS utilisés dans le projet CNRT Mines et Territoires, au format _ESRI Shapefile_.
+- [nb_etab_sante_par_type_commune.csv](dist/nb_etab_sante_par_type_commune.csv) le nombre d'établissements de santé par commune.
+- [desserte_mine_iris.csv](dist/desserte_mine_iris.csv) la matrice de desserte entre sites miniers (centres ou usines) par IRIS au format vertical.
+  - [desserte_mine_iris_pivot_minimum.csv](dist/desserte_mine_iris_pivot_minimum.csv) : la durée _minimum_ de desserte au format large.
+  - [desserte_mine_iris_pivot_mediane.csv](dist/desserte_mine_iris_pivot_mediane.csv) : la durée _médiane_ de desserte au format large.
+  - [desserte_mine_iris_pivot_moyenne.csv](dist/desserte_mine_iris_pivot_moyenne.csv) : la durée _moyenne_ de desserte au format large.
+  - [desserte_mine_iris_pivot_maximum.csv](dist/desserte_mine_iris_pivot_maximum.csv) : la durée _maximum_ de desserte au format large.
+- [desserte_etabs_sante_iris.csv](dist/desserte_etabs_sante_iris.csv) la matrice de desserte entre établissements de santé (hôpitaux, dispensaires, pharmacies ou sage-femmes) par IRIS au format vertical.
+  - [desserte_etabs_sante_iris_pivot_minimum.csv](dist/desserte_etabs_sante_iris_pivot_minimum.csv) : la durée _minimum_ de desserte au format large.
+  - [desserte_etabs_sante_iris_pivot_mediane.csv](dist/desserte_etabs_sante_iris_pivot_mediane.csv) : la durée _médiane_ de desserte au format large.
+  - [desserte_etabs_sante_iris_pivot_moyenne.csv](dist/desserte_etabs_sante_iris_pivot_moyenne.csv) : la durée _moyenne_ de desserte au format large.
+  - [desserte_etabs_sante_iris_pivot_maximum.csv](dist/desserte_etabs_sante_iris_pivot_maximum.csv) : la durée _maximum_ de desserte au format large.
