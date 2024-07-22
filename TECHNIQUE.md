@@ -508,7 +508,7 @@ FROM pgr_dijkstraCost(
 ### Table des dessertes détaillées
 
 On exécute le fichier [create_table_desserte.sql](database/create_table_desserte.sql) pour créer une table `desserte_poi` des résultats intermédiaires comme suit, où on utilise le nom de la table des POI comme valeur de `poi_type`.
-Le script d'insertion
+Le script crée aussi une table pour les agrégats qu'on détaillera plus bas.
 
 ```raw
              Table "public.desserte_poi"
@@ -632,7 +632,7 @@ order by nb desc;
 -- (53 rows)
 ```
 
-### Agrégation des coûts de desserte
+## Agrégation des coûts de desserte
 
 À ce stade, on dispose des données comme suit :
 
@@ -729,13 +729,51 @@ order by poi_type desc, poi_id;
 -- ...
 ```
 
-Pour calculer les matrices de dessertes des POI, il suffit d'agréger les destinations de la table `desserte_poi` par unité géographique comme les IRIS ou les communes.
+### Agrégation par IRIS
+
+Pour calculer les matrices de dessertes des POI, il faut agréger les destinations de la table `desserte_poi` par _unité géographique_ comme les IRIS ou les communes.
+La table `desserte_aggregate_iris` reprend les identifiant des POI de `desserte_poi` mais remplace les noeuds DITTT de destination par des IRIS pris dans `cnrt_iris`.
+
+```raw
+         Table "public.desserte_aggregate_iris"
+    Column    |  Type   | Collation | Nullable | Default 
+--------------+---------+-----------+----------+---------
+ poi_type     | text    |           | not null | 
+ poi_id       | integer |           | not null | 
+ poi_name     | text    |           | not null | 
+ iris_code    | text    |           | not null | 
+ iris_libelle | text    |           |          | 
+ minimum      | numeric |           |          | 
+ mediane      | numeric |           |          | 
+ moyenne      | numeric |           |          | 
+ maximum      | numeric |           |          | 
+Indexes:
+    "desserte_aggregate_iris_pkey" PRIMARY KEY, btree (poi_type, poi_id, iris_code)
+Check constraints:
+    "desserte_aggregate_iris_poi_type_check" CHECK (poi_type = ANY (ARRAY['dimenc_usines'::text, 'dimenc_centres'::text, 'dass_etabs_sante'::text]))
+Foreign-key constraints:
+    "desserte_aggregate_iris_iris_code_fkey" FOREIGN KEY (iris_code) REFERENCES cnrt_iris(code_iris)
+    "desserte_aggregate_iris_iris_libelle_fkey" FOREIGN KEY (iris_libelle) REFERENCES cnrt_iris(lib_iris)
+```
+
+Les requêtes de calcul des agrégats sont dans les fichiers suivants, où on considère **toutes** les combinaisons de POI et d'IRIS, même si l'IRIS n'est pas accessible (par exemple, une île depuis une usine) auquel cas la valeur est `NULL` :
+
+- [Pour les usines](database/insert_table_desserte_aggregate_dimenc_usines.sql), 170 * 3 = 210 lignes, durée d'exécution d'environ 00:00:05.
+- [Pour les centres](database/insert_table_desserte_aggregate_dimenc_centres.sql), 170 * 40 = 6800 lignes, durée d'exécution d'environ 00:01:03.
+- [Pour les établissements de santé](database/insert_table_desserte_aggregate_dass_etabs_sante.sql), 170 * 149 = 25330 lignes, durée d'exécution d'environ 00:04:08.
+
+### Export des résultats
+
 On exporte les données dans un format appelé _normalisé_ en bases de données ou _tidy_ dans la communauté R (voir [tidyr.tidyverse.org](https://tidyr.tidyverse.org/articles/tidy-data.html)) qui est le plus agréable à utiliser programmatiquement.
-On propose aussi une version pivotée en largeur pour un usage humain.
+On sépare les POI miniers des POI de santé.
 
-⚠️ ici mettre au point la requête d'agrégation avec l'ouverture pour bien avoir |poi|*|iris| lignes ⚠️
+```sql
+\COPY (SELECT * FROM desserte_aggregate_iris WHERE poi_type IN ('dimenc_usines', 'dimenc_centres')) TO '../dist/desserte_mine_iris.csv' WITH (FORMAT CSV, DELIMITER ',', HEADER ON, NULL 'NULL');
 
-## Export des résultats
+\COPY (SELECT * FROM desserte_aggregate_iris WHERE poi_type IN ('dass_etabs_sante')) TO '../dist/desserte_etabs_sante_iris.csv' WITH (FORMAT CSV, DELIMITER ',', HEADER ON, NULL 'NULL');
+```
+
+Avec le script [pivot.py](scripts/pivot.py) on calcule une version pivotée en largeur pour un usage humain.
 
 ## Annexe
 
@@ -778,3 +816,249 @@ qgis --version
 ```
 
 ### Structure finale de l'ensemble des tables
+
+```raw
+                                         Table "public.dittt_noeuds"
+    Column    |         Type          | Collation | Nullable |                    Default                     
+--------------+-----------------------+-----------+----------+------------------------------------------------
+ objectid     | integer               |           | not null | nextval('dittt_noeuds_objectid_seq'::regclass)
+ noe_type     | character varying(3)  |           |          | 
+ noe_valide   | date                  |           |          | 
+ noe_vali_1   | character varying(1)  |           |          | 
+ noe_guid     | character varying(36) |           |          | 
+ noe_seg_su   | character varying(36) |           |          | 
+ noe_seg_in   | character varying(36) |           |          | 
+ created_us   | character varying(13) |           |          | 
+ created_da   | date                  |           |          | 
+ last_edite   | character varying(13) |           |          | 
+ last_edi_1   | date                  |           |          | 
+ wkb_geometry | geometry(PointZ,3163) |           |          | 
+ component    | integer               |           |          | 
+Indexes:
+    "dittt_noeuds_pkey" PRIMARY KEY, btree (objectid)
+    "dittt_noeuds_noe_guid_uniq" UNIQUE CONSTRAINT, btree (noe_guid)
+    "dittt_noeuds_wkb_geometry_geom_idx" gist (wkb_geometry)
+Referenced by:
+    TABLE "dass_etabs_sante" CONSTRAINT "dass_etabs_sante_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+    TABLE "desserte_poi" CONSTRAINT "desserte_poi_source_fkey" FOREIGN KEY (source) REFERENCES dittt_noeuds(objectid)
+    TABLE "desserte_poi" CONSTRAINT "desserte_poi_target_fkey" FOREIGN KEY (target) REFERENCES dittt_noeuds(objectid)
+    TABLE "dimenc_centres" CONSTRAINT "dimenc_centres_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+    TABLE "dimenc_usines" CONSTRAINT "dimenc_usines_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+    TABLE "dittt_segments" CONSTRAINT "dittt_segments_seg_noe_de_fk" FOREIGN KEY (seg_noe_de) REFERENCES dittt_noeuds(noe_guid)
+    TABLE "dittt_segments" CONSTRAINT "dittt_segments_seg_noe_fi_fk" FOREIGN KEY (seg_noe_fi) REFERENCES dittt_noeuds(noe_guid)
+
+                                              Table "public.dittt_segments"
+    Column    |              Type               | Collation | Nullable |                     Default                      
+--------------+---------------------------------+-----------+----------+--------------------------------------------------
+ objectid     | integer                         |           | not null | nextval('dittt_segments_objectid_seq'::regclass)
+ seg_type     | character varying(3)            |           |          | 
+ seg_revete   | character varying(2)            |           |          | 
+ seg_sens_c   | character varying(2)            |           |          | 
+ seg_valide   | date                            |           |          | 
+ seg_vali_1   | character varying(1)            |           |          | 
+ seg_nb_voi   | numeric(1,0)                    |           |          | 
+ seg_origin   | character varying(6)            |           |          | 
+ seg_type_a   | character varying(10)           |           |          | 
+ seg_date_a   | date                            |           |          | 
+ seg_select   | character varying(1)            |           |          | 
+ seg_vitess   | numeric(3,0)                    |           |          | 
+ seg_vite_1   | character varying(3)            |           |          | 
+ seg_foncti   | character varying(2)            |           |          | 
+ seg_guid     | character varying(36)           |           |          | 
+ seg_noe_fi   | character varying(36)           |           |          | 
+ seg_noe_de   | character varying(36)           |           |          | 
+ seg_nom_gu   | character varying(36)           |           |          | 
+ created_us   | character varying(13)           |           |          | 
+ created_da   | date                            |           |          | 
+ last_edite   | character varying(13)           |           |          | 
+ last_edi_1   | date                            |           |          | 
+ seg_largeu   | numeric(2,0)                    |           |          | 
+ seg_larg_1   | character varying(2)            |           |          | 
+ shape__len   | numeric(24,15)                  |           |          | 
+ wkb_geometry | geometry(MultiLineStringZ,3163) |           |          | 
+Indexes:
+    "dittt_segments_pkey" PRIMARY KEY, btree (objectid)
+    "dittt_segments_seg_guid_uniq" UNIQUE CONSTRAINT, btree (seg_guid)
+    "dittt_segments_seg_noe_de_idx" btree (seg_noe_de)
+    "dittt_segments_seg_noe_fi_idx" btree (seg_noe_fi)
+    "dittt_segments_seg_type_idx" btree (seg_type)
+    "dittt_segments_wkb_geometry_geom_idx" gist (wkb_geometry)
+Foreign-key constraints:
+    "dittt_segments_seg_noe_de_fk" FOREIGN KEY (seg_noe_de) REFERENCES dittt_noeuds(noe_guid)
+    "dittt_segments_seg_noe_fi_fk" FOREIGN KEY (seg_noe_fi) REFERENCES dittt_noeuds(noe_guid)
+    "dittt_segments_seg_nom_gu_fk" FOREIGN KEY (seg_nom_gu) REFERENCES dittt_denominations(nom_guid)
+
+                      Table "public.dittt_denominations"
+          Column          |       Type        | Collation | Nullable | Default 
+--------------------------+-------------------+-----------+----------+---------
+ objectid                 | integer           |           | not null | 
+ nom_code                 | character varying |           |          | 
+ nom_libelle              | character varying |           |          | 
+ code_commune             | numeric           |           |          | 
+ nom_libelle_commune      | character varying |           |          | 
+ nom_code_commune         | numeric           |           | not null | 
+ nom_libelle_proprietaire | character varying |           |          | 
+ nom_code_proprietaire    | character varying |           |          | 
+ globalid                 | character varying |           | not null | 
+ nom_guid                 | character varying |           | not null | 
+ created_user             | character varying |           |          | 
+ created_date             | character varying |           |          | 
+ last_edited_user         | character varying |           | not null | 
+ last_edited_date         | character varying |           | not null | 
+ nom_gestion              | character varying |           | not null | 
+ nom_prefixe              | character varying |           |          | 
+ nom_type                 | character varying |           |          | 
+ nom_article              | character varying |           |          | 
+ nom_suffixe              | character varying |           |          | 
+ nom_titre                | character varying |           |          | 
+ nom_prenom               | character varying |           |          | 
+ nom_denom                | character varying |           |          | 
+Indexes:
+    "dittt_denominations_pkey" PRIMARY KEY, btree (objectid)
+    "dittt_denominations_nom_guid_uniq" UNIQUE CONSTRAINT, btree (nom_guid)
+Referenced by:
+    TABLE "dittt_segments" CONSTRAINT "dittt_segments_seg_nom_gu_fk" FOREIGN KEY (seg_nom_gu) REFERENCES dittt_denominations(nom_guid)
+
+             Materialized view "public.dittt_segments_pgr"
+     Column     |         Type         | Collation | Nullable | Default 
+----------------+----------------------+-----------+----------+---------
+ id             | integer              |           |          | 
+ source         | integer              |           |          | 
+ target         | integer              |           |          | 
+ seg_type       | text                 |           |          | 
+ seg_sens       | character varying(2) |           |          | 
+ distance       | double precision     |           |          | 
+ deniv_m        | double precision     |           |          | 
+ total_distance | double precision     |           |          | 
+ speed          | numeric(3,0)         |           |          | 
+ cost           | double precision     |           |          | 
+ reverse_cost   | double precision     |           |          | 
+
+                                           Table "public.dimenc_usines"
+     Column      |         Type          | Collation | Nullable |                     Default                     
+-----------------+-----------------------+-----------+----------+-------------------------------------------------
+ objectid        | integer               |           | not null | nextval('dimenc_usines_objectid_seq'::regclass)
+ societe         | character varying(7)  |           |          | 
+ etat            | character varying(13) |           |          | 
+ site            | character varying(8)  |           |          | 
+ procede         | character varying(19) |           |          | 
+ date_mise_      | numeric(4,0)          |           |          | 
+ wkb_geometry    | geometry(Point,3163)  |           |          | 
+ dittt_noeud_ref | integer               |           |          | 
+Indexes:
+    "dimenc_usines_pkey" PRIMARY KEY, btree (objectid)
+    "dimenc_usines_site_idx" UNIQUE CONSTRAINT, btree (site)
+    "dimenc_usines_wkb_geometry_geom_idx" gist (wkb_geometry)
+Foreign-key constraints:
+    "dimenc_usines_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+
+                                           Table "public.dimenc_centres"
+     Column      |         Type          | Collation | Nullable |                     Default                      
+-----------------+-----------------------+-----------+----------+--------------------------------------------------
+ objectid        | integer               |           | not null | nextval('dimenc_centres_objectid_seq'::regclass)
+ massif_min      | character varying(11) |           |          | 
+ site_minie      | character varying(28) |           |          | 
+ titulaire       | character varying(36) |           |          | 
+ tacheron        | character varying(10) |           |          | 
+ type_autor      | character varying(36) |           |          | 
+ province        | character varying(18) |           |          | 
+ commune         | character varying(20) |           |          | 
+ num_arrete      | character varying(20) |           |          | 
+ date_arret      | date                  |           |          | 
+ num_arre_1      | character varying(20) |           |          | 
+ date_arr_1      | date                  |           |          | 
+ duree           | numeric(2,0)          |           |          | 
+ titulaire_      | character varying(4)  |           |          | 
+ wkb_geometry    | geometry(Point,3163)  |           |          | 
+ dittt_noeud_ref | integer               |           |          | 
+Indexes:
+    "dimenc_centres_pkey" PRIMARY KEY, btree (objectid)
+    "dimenc_centres_wkb_geometry_geom_idx" gist (wkb_geometry)
+    "dimenc_mines_site_idx" UNIQUE CONSTRAINT, btree (site_minie)
+Foreign-key constraints:
+    "dimenc_centres_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+
+                                           Table "public.dass_etabs_sante"
+     Column      |          Type          | Collation | Nullable |                      Default                       
+-----------------+------------------------+-----------+----------+----------------------------------------------------
+ fid_etab        | integer                |           | not null | nextval('dass_etabs_sante_fid_etab_seq'::regclass)
+ commune         | character varying(255) |           |          | 
+ type_etabli     | character varying(255) |           |          | 
+ denominatio     | character varying(255) |           |          | 
+ resemsej        | character varying(255) |           |          | 
+ raison_soci     | character varying(255) |           |          | 
+ resemseg        | character varying(255) |           |          | 
+ adresse         | character varying(255) |           |          | 
+ situation       | character varying(255) |           |          | 
+ horaires        | character varying(255) |           |          | 
+ contact_tel     | character varying(255) |           |          | 
+ contact_tel2    | character varying(255) |           |          | 
+ date_maj        | character varying(255) |           |          | 
+ jours_ouver     | character varying(255) |           |          | 
+ longitude       | character varying(255) |           |          | 
+ latitude        | character varying(255) |           |          | 
+ commentaire     | character varying(255) |           |          | 
+ wkb_geometry    | geometry(Point,3163)   |           |          | 
+ dittt_noeud_ref | integer                |           |          | 
+Indexes:
+    "dass_etabs_sante_pkey" PRIMARY KEY, btree (fid_etab)
+    "dass_etabs_sante_wkb_geometry_geom_idx" gist (wkb_geometry)
+Foreign-key constraints:
+    "dass_etabs_sante_dittt_noeud_ref_fkey" FOREIGN KEY (dittt_noeud_ref) REFERENCES dittt_noeuds(objectid)
+
+
+                                            Table "public.cnrt_iris"
+    Column    |            Type             | Collation | Nullable |                   Default                   
+--------------+-----------------------------+-----------+----------+---------------------------------------------
+ fid_iris     | integer                     |           | not null | nextval('cnrt_iris_fid_iris_seq'::regclass)
+ code_iris    | character varying(254)      |           |          | 
+ lib_iris     | character varying(254)      |           |          | 
+ code_com     | character varying(80)       |           |          | 
+ nom_com      | character varying(80)       |           |          | 
+ wkb_geometry | geometry(MultiPolygon,3163) |           |          | 
+Indexes:
+    "cnrt_iris_pkey" PRIMARY KEY, btree (fid_iris)
+    "cnrt_iris_code_iris_idx" UNIQUE CONSTRAINT, btree (code_iris)
+    "cnrt_iris_lib_iris_idx" UNIQUE CONSTRAINT, btree (lib_iris)
+    "cnrt_iris_wkb_geometry_geom_idx" gist (wkb_geometry)
+Referenced by:
+    TABLE "desserte_aggregate_iris" CONSTRAINT "desserte_aggregate_iris_iris_code_fkey" FOREIGN KEY (iris_code) REFERENCES cnrt_iris(code_iris)
+    TABLE "desserte_aggregate_iris" CONSTRAINT "desserte_aggregate_iris_iris_libelle_fkey" FOREIGN KEY (iris_libelle) REFERENCES cnrt_iris(lib_iris)
+
+             Table "public.desserte_poi"
+  Column  |  Type   | Collation | Nullable | Default 
+----------+---------+-----------+----------+---------
+ source   | integer |           | not null | 
+ poi_type | text    |           | not null | 
+ poi_id   | integer |           | not null | 
+ target   | integer |           | not null | 
+ cost     | numeric |           |          | 
+Indexes:
+    "desserte_poi_pkey" PRIMARY KEY, btree (poi_type, poi_id, target)
+Check constraints:
+    "desserte_poi_poi_type_check" CHECK (poi_type = ANY (ARRAY['dimenc_usines'::text, 'dimenc_centres'::text, 'dass_etabs_sante'::text]))
+Foreign-key constraints:
+    "desserte_poi_source_fkey" FOREIGN KEY (source) REFERENCES dittt_noeuds(objectid)
+    "desserte_poi_target_fkey" FOREIGN KEY (target) REFERENCES dittt_noeuds(objectid)
+
+         Table "public.desserte_aggregate_iris"
+    Column    |  Type   | Collation | Nullable | Default 
+--------------+---------+-----------+----------+---------
+ poi_type     | text    |           | not null | 
+ poi_id       | integer |           | not null | 
+ poi_name     | text    |           | not null | 
+ iris_code    | text    |           | not null | 
+ iris_libelle | text    |           |          | 
+ minimum      | numeric |           |          | 
+ mediane      | numeric |           |          | 
+ moyenne      | numeric |           |          | 
+ maximum      | numeric |           |          | 
+Indexes:
+    "desserte_aggregate_iris_pkey" PRIMARY KEY, btree (poi_type, poi_id, iris_code)
+Check constraints:
+    "desserte_aggregate_iris_poi_type_check" CHECK (poi_type = ANY (ARRAY['dimenc_usines'::text, 'dimenc_centres'::text, 'dass_etabs_sante'::text]))
+Foreign-key constraints:
+    "desserte_aggregate_iris_iris_code_fkey" FOREIGN KEY (iris_code) REFERENCES cnrt_iris(code_iris)
+    "desserte_aggregate_iris_iris_libelle_fkey" FOREIGN KEY (iris_libelle) REFERENCES cnrt_iris(lib_iris)
+
+```
