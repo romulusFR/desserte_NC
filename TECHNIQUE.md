@@ -1,5 +1,22 @@
 # Élaboration d'une matrice de desserte en Nouvelle-Calédonie
 
+- [Élaboration d'une matrice de desserte en Nouvelle-Calédonie](#élaboration-dune-matrice-de-desserte-en-nouvelle-calédonie)
+  - [Import des données](#import-des-données)
+    - [Création des tables et chargement](#création-des-tables-et-chargement)
+    - [Nettoyage](#nettoyage)
+    - [Vérification](#vérification)
+  - [Préparation du calcul des trajets avec `pgRouting`](#préparation-du-calcul-des-trajets-avec-pgrouting)
+    - [Vue des segments au format `pgRouting`](#vue-des-segments-au-format-pgrouting)
+    - [Composantes connexes et résolution des nœuds DITTT](#composantes-connexes-et-résolution-des-nœuds-dittt)
+    - [Desserte depuis les POI](#desserte-depuis-les-poi)
+  - [Calcul et agrégation des coûts de desserte](#calcul-et-agrégation-des-coûts-de-desserte)
+    - [Table des dessertes détaillées](#table-des-dessertes-détaillées)
+    - [Agrégation par IRIS](#agrégation-par-iris)
+    - [Export des résultats](#export-des-résultats)
+  - [Annexe](#annexe)
+    - [Environnement utilisé](#environnement-utilisé)
+    - [Structure finale de l'ensemble des tables](#structure-finale-de-lensemble-des-tables)
+
 Ce document décrit la méthode calcul du temps de trajet par la route entre les IRIS et des points d'intérêts (POI), notamment les sites miniers (centre et usines) ou les établissements de santé de Nouvelle-Calédonie.
 
 ## Import des données
@@ -33,7 +50,7 @@ Les schémas finaux après exécution de toutes les étapes sont donnés en anne
 
 On exécute le script [alter_tables_pk_fk.sql](database/alter_tables_pk_fk.sql) pour durcir le schéma en ajoutant des clefs alternatives et des clefs étrangères.
 On corrige au passage quelques erreurs ponctuelles sur la version du 2024-07-16.
-Voir le fichier [03_cleaning.sh](scripts/03_cleaning.sh) qui exécute le fichier `sql`.
+Voir le fichier [03_cleaning.sh](scripts/03_cleaning.sh) qui exécute les fichiers SQL adéquats.
 
 ### Vérification
 
@@ -121,9 +138,9 @@ WHERE nom_code = 'R.T.1';
 --  401.6447358156211
 ```
 
-## Calcul des trajets avec `pgRouting`
+## Préparation du calcul des trajets avec `pgRouting`
 
-Voir le fichier [04_prepare_pgr.sh](scripts/04_prepare_pgr.sh) qui exécute les programmes SQL des trois premières sections.
+Le fichier [04_prepare_pgr.sh](scripts/04_prepare_pgr.sh) exécute les programmes SQL des trois sous-sections.
 
 ### Vue des segments au format `pgRouting`
 
@@ -159,13 +176,13 @@ On obtient un extrait comme suit avec la requête `select * from dittt_segments_
 
 On calcule un trajet de référence entre les deux sites de l'UNC et l'usine du nord :
 
-- Noeud _UNC - site Nouville_ : `objectid = 270424` (type `J`).
+- Nœud _UNC - site Nouville_ : `objectid = 270424` (type `J`).
   - Point situé au 102 Av. James Cook à Nouville, à l'intersection avec la rue Kataoui.
   - GPS : -22.2619,166.4042
-- Noeud _UNC - site Baco_ : `objectid = 200545` (type `FDR`).
+- Nœud _UNC - site Baco_ : `objectid = 200545` (type `FDR`).
   - Point situé au bout du chemin entre l'UNC et la caserne de pompiers, au début de la RPN2 / Koné Tiwaka.
   - GPS : -21.0923,164.8913
-- Noeud _usine du nord_ : `objectid = 91270` (type `J`).
+- Nœud _usine du nord_ : `objectid = 91270` (type `J`).
   - Point situé au plus proche de celui de l'usine dans les données DIMENC, sur la piste après la RT1, au pied du four.
   - GPS : -21.0138,164.6836
 
@@ -239,10 +256,10 @@ SELECT * FROM pgr_dijkstraCost('SELECT * FROM dittt_segments_pgr', 91270, ARRAY[
 ### Composantes connexes et résolution des nœuds DITTT
 
 Une première étape du calcul est de calculer pour chaque POI identifié géométriquement un nœud DITTT le plus proche.
-Ce problème est appelé [map matching](https://en.wikipedia.org/wiki/Map_matching).
+Ce problème est appelé [_map matching_](https://en.wikipedia.org/wiki/Map_matching).
 Pour cela, on ajoute une colonne `dittt_noeud_ref` à chacune des tables des POI avec une clef étrangère vers la table DITTT.
 
-On ajoute préalablement un identifiant de composante connexe du réseau à chaque nœud, cela permettra de vérifier que les nœuds DITTT identifiés sont bien routables, c'est-à-dire dans un morceau connexe du réseau principal.
+On ajoute préalablement un identifiant de composante connexe du réseau à chaque nœud, cela permettra de vérifier que les nœuds DITTT identifiés sont bien accessibles par la route, c'est-à-dire dans un morceau connexe du réseau principal.
 
 ```sql
 select component, count(*) as count from dittt_noeuds group by component order by count desc;
@@ -381,7 +398,7 @@ select count(distinct dittt_noeud_ref) from dass_etabs_sante poi where wkb_geome
 -- 1333 et 763 : KO /!\
 ```
 
-#### Distances entre POI et noeuds DITTT
+#### Distances entre POI et nœuds DITTT
 
 On vérifie que les distances entre les coordonnées d'origines des POI et les nœuds de référence sont raisonnables.
 
@@ -456,7 +473,7 @@ On calcule le temps de trajet _de chaque POI **vers** les nœuds DITTT_ (et non 
 
 #### Exemple entre l'usine du nord et les nœuds de Farino
 
-La requête suivante liste tous les couples _(source, destination)_ depuis le POI 9127 (l'usine du nord) vers les nœuds _carrossables_ de l'IRIS de Farino. _Carrossable_ signifiant qu'il y a au moins un segment de route relié à ce nnœud de type `VCU`, `VCS`, `B`, `VR`, `A`, `RP` (hors nœuds de type piste `P`).
+La requête suivante liste tous les couples _(source, destination)_ depuis le POI 9127 (l'usine du nord) vers les nœuds _carrossables_ de l'IRIS de Farino. _Carrossable_ signifiant qu'il y a au moins un segment de route relié à ce nœud de type `VCU`, `VCS`, `B`, `VR`, `A`, `RP` (hors nœuds de type piste `P`).
 
 ```sql
 with carrossable as (
@@ -504,6 +521,10 @@ FROM pgr_dijkstraCost(
     'where lib_iris = ''Farino'' and n.objectid in (select * from carrossable);',
     TRUE) AS direction;
 ```
+
+## Calcul et agrégation des coûts de desserte
+
+Le script [05_compute.sh](scripts/05_compute.sh) exécute les fichiers SQL de calcul de cette section.
 
 ### Table des dessertes détaillées
 
@@ -557,7 +578,7 @@ WHERE target IN (SELECT * FROM dans_iles) AND cost IS NOT NULL AND poi_type IN (
 -- (0 rows)
 ```
 
-#### Traitement des masses de POI
+#### Traitement en masses de POI
 
 Si le nombre de POI est trop important, `pgRouting` peut avoir des difficultés à allouer la RAM et faillir avec l'erreur `ERROR:  XX000: invalid memory alloc request size ...`.
 Il faut alors décomposer la requête avec un **plus petit nombre de sources** dans `pgr_dijkstraCost` en insérant les résultats partiels à `desserte_poi`.
@@ -632,7 +653,9 @@ order by nb desc;
 -- (53 rows)
 ```
 
-## Agrégation des coûts de desserte
+Ici, on se limite à la sélection `poi.type_etabli IN ('Dispensaire', 'Hôpitaux', 'Pharmacie', 'Sage-Femme')`.
+
+### Agrégation par IRIS
 
 À ce stade, on dispose des données comme suit :
 
@@ -729,10 +752,8 @@ order by poi_type desc, poi_id;
 -- ...
 ```
 
-### Agrégation par IRIS
-
 Pour calculer les matrices de dessertes des POI, il faut agréger les destinations de la table `desserte_poi` par _unité géographique_ comme les IRIS ou les communes.
-La table `desserte_aggregate_iris` reprend les identifiant des POI de `desserte_poi` mais remplace les noeuds DITTT de destination par des IRIS pris dans `cnrt_iris`.
+La table `desserte_aggregate_iris` reprend les identifiants des POI de `desserte_poi` mais remplace les nœuds DITTT de destination par des IRIS pris dans `cnrt_iris`.
 
 ```raw
          Table "public.desserte_aggregate_iris"
