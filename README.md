@@ -32,6 +32,7 @@ L'avant-dernière ligne indique qu'il faut entre 70 et 147 minutes, avec une dur
 
 Le document [TECHNIQUE.md](TECHNIQUE.md) détaille la méthode employée.
 L'intégralité des code est fournie dans le présent dépôt, pour pouvoir reproduire les calculs dans un environnement Linux.
+Pour cela, mettre à jour le fichier [scripts/environment](scripts/environment) puis exécuter les scripts `.sh` du dossier [scripts/](scripts/) **dans l'ordre**.
 
 ## Documents produits
 
@@ -49,3 +50,8 @@ Les fichiers suivants sont diffusés dans le cadre de cette étude :
   - [desserte_etabs_sante_iris_pivot_mediane.csv](dist/desserte_etabs_sante_iris_pivot_mediane.csv) : la durée _médiane_ de desserte au format large.
   - [desserte_etabs_sante_iris_pivot_moyenne.csv](dist/desserte_etabs_sante_iris_pivot_moyenne.csv) : la durée _moyenne_ de desserte au format large.
   - [desserte_etabs_sante_iris_pivot_maximum.csv](dist/desserte_etabs_sante_iris_pivot_maximum.csv) : la durée _maximum_ de desserte au format large.
+
+## TODO
+
+- [ ] Voir à remplacer `desserte_aggregate_iris` et `desserte_poi` par des vues matérialisées, ou en tout cas voir la question des mises à jour.
+- [ ] Voir pourquoi quasiment aucun parallélisme, même pour les agrégats finaux.

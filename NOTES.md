@@ -12,3 +12,4 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
 - Automatisation pour changement d'environnement, notamment le déploiement au serveur.
 - Comment faire suivre les références aux sources utilisées (db, .shp, wms) dans QGis, comment avoir _un cache_ de l'instant t.
 - Possible faire base QGIS programmatique via xml ou Python poru échaffauder des projets de départ.
+- Scripting / full auto : quel env, vérifier d'une màj à l'autre.

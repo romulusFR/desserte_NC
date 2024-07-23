@@ -15,7 +15,8 @@
     - [Export des résultats](#export-des-résultats)
   - [Annexe](#annexe)
     - [Environnement utilisé](#environnement-utilisé)
-    - [Structure finale de l'ensemble des tables](#structure-finale-de-lensemble-des-tables)
+    - [Liste et taille des tables](#liste-et-taille-des-tables)
+    - [Structures finales de l'ensemble des tables](#structures-finales-de-lensemble-des-tables)
 
 Ce document décrit la méthode calcul du temps de trajet par la route entre les IRIS et des points d'intérêts (POI), notamment les sites miniers (centre et usines) ou les établissements de santé de Nouvelle-Calédonie.
 
@@ -836,7 +837,42 @@ qgis --version
 # QGIS 3.38.0-Grenoble 'Grenoble' (37aa6188bc3)
 ```
 
-### Structure finale de l'ensemble des tables
+### Liste et taille des tables
+
+```sql
+SELECT pg_size_pretty(pg_database_size('cnrt2'));
+--  pg_size_pretty 
+-- ----------------
+--  5375 MB
+```
+
+```raw
+ Schema |             Name              |       Type        |  Owner   | Persistence | Access method |    Size    | Description 
+--------+-------------------------------+-------------------+----------+-------------+---------------+------------+-------------
+ public | bdadmin_communes              | table             | romulus  | permanent   | heap          | 18 MB      | 
+ public | bdadmin_communes_objectid_seq | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | cnrt_iris                     | table             | romulus  | permanent   | heap          | 17 MB      | 
+ public | cnrt_iris_fid_iris_seq        | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | dass_etabs_sante              | table             | romulus  | permanent   | heap          | 808 kB     | 
+ public | dass_etabs_sante_fid_etab_seq | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | desserte_aggregate_iris       | table             | romulus  | permanent   | heap          | 4392 kB    | 
+ public | desserte_poi                  | table             | romulus  | permanent   | heap          | 1452 MB    | 
+ public | dimenc_centres                | table             | romulus  | permanent   | heap          | 72 kB      | 
+ public | dimenc_centres_objectid_seq   | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | dimenc_usines                 | table             | romulus  | permanent   | heap          | 16 kB      | 
+ public | dimenc_usines_objectid_seq    | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | dittt_denominations           | table             | romulus  | permanent   | heap          | 1192 kB    | 
+ public | dittt_noeuds                  | table             | romulus  | permanent   | heap          | 110 MB     | 
+ public | dittt_noeuds_objectid_seq     | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | dittt_segments                | table             | romulus  | permanent   | heap          | 572 MB     | 
+ public | dittt_segments_objectid_seq   | sequence          | romulus  | permanent   |               | 8192 bytes | 
+ public | dittt_segments_pgr            | materialized view | romulus  | permanent   | heap          | 29 MB      | 
+ public | geography_columns             | view              | postgres | permanent   |               | 0 bytes    | 
+ public | geometry_columns              | view              | postgres | permanent   |               | 0 bytes    | 
+ public | spatial_ref_sys               | table             | postgres | permanent   | heap          | 6936 kB    | 
+```
+
+### Structures finales de l'ensemble des tables
 
 ```raw
                                          Table "public.dittt_noeuds"
