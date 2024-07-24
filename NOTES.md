@@ -11,5 +11,6 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
   - Existe, mais je ne sais pas les utiliser, pas poru la recherche en tout cas
 - Automatisation pour changement d'environnement, notamment le déploiement au serveur.
 - Comment faire suivre les références aux sources utilisées (db, .shp, wms) dans QGis, comment avoir _un cache_ de l'instant t.
-- Possible faire base QGIS programmatique via xml ou Python poru échaffauder des projets de départ.
+- Possible faire base QGIS programmatique via xml ou Python pour _scaffold__ des projets de départ.
 - Scripting / full auto : quel env, vérifier d'une màj à l'autre.
+- J'ai moi-même changé les formats : car ils sont mieux ! Hypothèse _après c'est mieux ?_ : le format pivot est le plus récent ? mais en pratique... le moins disant !

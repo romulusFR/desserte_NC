@@ -14,6 +14,7 @@
     - [Agrégation par IRIS](#agrégation-par-iris)
     - [Export des résultats](#export-des-résultats)
   - [Annexe](#annexe)
+    - [Comparaison avec la version 2021](#comparaison-avec-la-version-2021)
     - [Environnement utilisé](#environnement-utilisé)
     - [Liste et taille des tables](#liste-et-taille-des-tables)
     - [Structures finales de l'ensemble des tables](#structures-finales-de-lensemble-des-tables)
@@ -798,6 +799,12 @@ On sépare les POI miniers des POI de santé.
 Avec le script [pivot.py](scripts/pivot.py) on calcule une version pivotée en largeur pour un usage humain.
 
 ## Annexe
+
+### Comparaison avec la version 2021
+
+Le dossier [tests](tests/) contient le matériel pour comparer la matrice de desserte 2024 avec celle calculées en 2021.
+On constante des écarts de quelques minutes sauf pour le centre minier numéro 32 Ouinné, qui est impacté par le choix de la composante connexe du réseau DITTT.
+La version 2024 est plus cohérente sur ce point.
 
 ### Environnement utilisé
 
