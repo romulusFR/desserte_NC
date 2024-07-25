@@ -5,10 +5,10 @@ WITH aggregates AS (
     poi.denominatio || ' (' || poi.type_etabli || ')' AS poi_name,
     i.code_iris AS iris_core,
     i.lib_iris AS iris_libelle,
-    ROUND(MIN(d.cost)/60)::integer AS minimum,
-    ROUND(percentile_disc(0.5) WITHIN GROUP (ORDER BY d.cost/60))::integer AS mediane,
-    ROUND(AVG(d.cost)/60)::integer AS moyenne,
-    ROUND(MAX(d.cost)/60)::integer AS maximum
+    MIN(d.cost)/60 AS minimum,
+    percentile_disc(0.5) WITHIN GROUP (ORDER BY d.cost/60) AS mediane,
+    AVG(d.cost)/60 AS moyenne,
+    MAX(d.cost)/60 AS maximum
   FROM 
     (dass_etabs_sante poi CROSS JOIN cnrt_iris i)
     LEFT OUTER JOIN (
