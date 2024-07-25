@@ -36,6 +36,8 @@ Pour cela, mettre à jour le fichier [scripts/environment](scripts/environment) 
 
 ## Résultats
 
+![Distance à l'usine KNS](dist/Export_QGIS_distance_usine_VKPP.jpg)
+
 ![Distance au centre minier le plus proche en minutes](dist/Export_QGIS_distance_centre_le_plus_proche.jpg)
 
 ![Distance à l'usine métallurgique minier la plus proche en minutes](dist/Export_QGIS_distance_usine_la_plus_proche.jpg)
