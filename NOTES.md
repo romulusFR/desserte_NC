@@ -14,3 +14,4 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
 - Possible faire base QGIS programmatique via xml ou Python pour _scaffold__ des projets de départ.
 - Scripting / full auto : quel env, vérifier d'une màj à l'autre.
 - J'ai moi-même changé les formats : car ils sont mieux ! Hypothèse _après c'est mieux ?_ : le format pivot est le plus récent ? mais en pratique... le moins disant !
+- Toujours laisser la présentation à la présentation : typographie, arrondi/conversion entier.
