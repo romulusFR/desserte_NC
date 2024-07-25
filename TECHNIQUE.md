@@ -12,7 +12,9 @@
   - [Calcul et agrégation des coûts de desserte](#calcul-et-agrégation-des-coûts-de-desserte)
     - [Table des dessertes détaillées](#table-des-dessertes-détaillées)
     - [Agrégation par IRIS](#agrégation-par-iris)
-    - [Export des résultats](#export-des-résultats)
+  - [Export et exploitation des résultats](#export-et-exploitation-des-résultats)
+    - [Format CSV](#format-csv)
+    - [Requêtes d'exemple](#requêtes-dexemple)
   - [Annexe](#annexe)
     - [Comparaison avec la version 2021](#comparaison-avec-la-version-2021)
     - [Environnement utilisé](#environnement-utilisé)
@@ -785,10 +787,12 @@ Les requêtes de calcul des agrégats sont dans les fichiers suivants, où on co
 - [Pour les centres](database/insert_table_desserte_aggregate_dimenc_centres.sql), 170 * 40 = 6800 lignes, durée d'exécution d'environ 00:01:03.
 - [Pour les établissements de santé](database/insert_table_desserte_aggregate_dass_etabs_sante.sql), 170 * 149 = 25330 lignes, durée d'exécution d'environ 00:04:08.
 
-### Export des résultats
+## Export et exploitation des résultats
+
+### Format CSV
 
 On exporte les données dans un format appelé _normalisé_ en bases de données ou _tidy_ dans la communauté R (voir [tidyr.tidyverse.org](https://tidyr.tidyverse.org/articles/tidy-data.html)) qui est le plus agréable à utiliser programmatiquement.
-On sépare les POI miniers des POI de santé.
+On sépare les POI miniers des POI de santé, voir les exemples suivants et le script [06_export.sh](scripts/06_export.sh).
 
 ```sql
 \COPY (SELECT * FROM desserte_aggregate_iris WHERE poi_type IN ('dimenc_usines', 'dimenc_centres')) TO '../dist/desserte_mine_iris.csv' WITH (FORMAT CSV, DELIMITER ',', HEADER ON, NULL 'NULL');
@@ -798,12 +802,116 @@ On sépare les POI miniers des POI de santé.
 
 Avec le script [pivot.py](scripts/pivot.py) on calcule une version pivotée en largeur pour un usage humain.
 
+### Requêtes d'exemple
+
+#### Trajet UNC de Nouville à Baco
+
+Avec la géométrie, pour import dans une couche QGis.
+
+```sql
+SELECT
+  direction.seq,
+  direction.agg_cost AS agg_cost,
+  e.*
+FROM pgr_dijkstra('SELECT * FROM dittt_segments_pgr',
+                   270424, 200545, TRUE) AS direction
+     JOIN dittt_segments e ON direction.edge = e.objectid
+ORDER BY direction.seq;
+```
+
+#### Durée médiane à Koniambo
+
+Koniambo est l'usine numéro `1` de `dimenc_usines`.
+
+```sql
+select i.*, d.mediane
+from cnrt_iris i left outer join desserte_aggregate_iris d on i.code_iris = d.iris_code 
+where d.poi_type in ('dimenc_usines')
+      and d.poi_id = 1;
+```
+
+#### Durée détaillée à Koniambo
+
+```sql
+select n.*, d.cost as duree from desserte_poi d join dittt_noeuds n on d.target = n.objectid where d.poi_type = 'dimenc_usines' and d.poi_id = 1;
+```
+
+#### Usine la plus proche en durée médiane
+
+```sql
+with ranked as(
+    select
+        d.iris_code,
+        d.poi_type,
+        d.poi_id,
+        rank() over (
+            partition by d.iris_code, d.poi_type order by d.mediane asc
+        ) as rank,
+        d.mediane as mediane
+    from desserte_aggregate_iris d
+    where d.mediane is not null
+),
+
+desserte as (
+    select *
+    from ranked
+    where poi_type in ('dimenc_usines') and rank = 1
+) 
+
+select 
+    i.code_iris,
+    i.lib_iris,
+    poi.societe || ' - ' || poi.site AS usine,
+    d.mediane,
+    i.wkb_geometry
+from cnrt_iris i
+     left outer join desserte d on i.code_iris = d.iris_code
+     left outer join dimenc_usines poi on d.poi_id = poi.objectid 
+where true
+order by i.code_iris asc, rank asc;
+```
+
+#### Centre minier le plus proche en durée médiane
+
+```sql
+with ranked as(
+    select
+        d.iris_code,
+        d.poi_type,
+        d.poi_id,
+        rank() over (
+            partition by d.iris_code, d.poi_type order by d.mediane asc
+        ) as rank,
+        d.mediane as mediane
+    from desserte_aggregate_iris d
+    where d.mediane is not null
+),
+
+desserte as (
+    select *
+    from ranked
+    where poi_type in ('dimenc_centres') and rank = 1
+) 
+
+select 
+    i.code_iris,
+    i.lib_iris,
+    poi.titulaire || ' - ' || poi.site_minie as centre,
+    d.mediane,
+    i.wkb_geometry
+from cnrt_iris i
+     left outer join desserte d on i.code_iris = d.iris_code
+     left outer join dimenc_centres poi on d.poi_id = poi.objectid 
+where true
+order by i.code_iris asc, rank asc;
+```
+
 ## Annexe
 
 ### Comparaison avec la version 2021
 
-Le dossier [tests](tests/) contient le matériel pour comparer la matrice de desserte 2024 avec celle calculées en 2021.
-On constante des écarts de quelques minutes sauf pour le centre minier numéro 32 Ouinné, qui est impacté par le choix de la composante connexe du réseau DITTT.
+Le dossier [tests](tests/) contient le matériel pour comparer la matrice de desserte 2024 avec celle calculée en 2021.
+On constate des écarts de quelques minutes sauf pour le centre minier numéro 32 Ouinné, qui est impacté par le choix de la composante connexe du réseau DITTT.
 La version 2024 est plus cohérente sur ce point.
 
 ### Environnement utilisé
