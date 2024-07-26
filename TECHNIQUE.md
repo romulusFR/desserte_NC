@@ -1,6 +1,7 @@
 # Élaboration d'une matrice de desserte en Nouvelle-Calédonie
 
 - [Élaboration d'une matrice de desserte en Nouvelle-Calédonie](#élaboration-dune-matrice-de-desserte-en-nouvelle-calédonie)
+  - [TODO](#todo)
   - [Import des données](#import-des-données)
     - [Création des tables et chargement](#création-des-tables-et-chargement)
     - [Nettoyage](#nettoyage)
@@ -14,14 +15,22 @@
     - [Agrégation par IRIS](#agrégation-par-iris)
   - [Export et exploitation des résultats](#export-et-exploitation-des-résultats)
     - [Format CSV](#format-csv)
-    - [Requêtes d'exemple](#requêtes-dexemple)
+    - [Requêtes pour génération de cartes](#requêtes-pour-génération-de-cartes)
   - [Annexe](#annexe)
-    - [Comparaison avec la version 2021](#comparaison-avec-la-version-2021)
+    - [Comparaison avec la desserte 2021](#comparaison-avec-la-desserte-2021)
     - [Environnement utilisé](#environnement-utilisé)
     - [Liste et taille des tables](#liste-et-taille-des-tables)
     - [Structures finales de l'ensemble des tables](#structures-finales-de-lensemble-des-tables)
 
 Ce document décrit la méthode calcul du temps de trajet par la route entre les IRIS et des points d'intérêts (POI), notamment les sites miniers (centre et usines) ou les établissements de santé de Nouvelle-Calédonie.
+
+## TODO
+
+- [ ] Voir à remplacer `desserte_aggregate_iris` et `desserte_poi` par des vues matérialisées, ou en tout cas voir la question des mises à jour.
+- [ ] Voir pourquoi quasiment aucun parallélisme, même pour les agrégats finaux.
+- [ ] Voir à utiliser les noms des relations comme catégories des POI et une catégorie existante comme une sous-catégorie, e.g., `type_etabli` pour les établissements de santé.
+  - En particulier, car cela fait porter l'agrégat sur le sous-ensemble des catégories qu'on ne sait plus séparer après.
+- [ ] Voir une notion d'héritage des tables de POI d'une table abstraite avec les attributs communs, car `poi_type` est proche d'un codage de l'héritage.
 
 ## Import des données
 
@@ -802,11 +811,14 @@ On sépare les POI miniers des POI de santé, voir les exemples suivants et le s
 
 Avec le script [pivot.py](scripts/pivot.py) on calcule une version pivotée en largeur pour un usage humain.
 
-### Requêtes d'exemple
+### Requêtes pour génération de cartes
+
+On note qu'on utilise une échelle de couleur _Viridis inversée_ à 9 niveau par tranche de 15 minutes pour les cartes choroplèthes.
 
 #### Trajet UNC de Nouville à Baco
 
 Avec la géométrie, pour import dans une couche QGis.
+Requête utilisée dans QGis pour [cette illustration](img/trajet-reference-Nouville-Baco.png)
 
 ```sql
 SELECT
@@ -826,17 +838,22 @@ Koniambo est l'usine numéro `1` de `dimenc_usines`.
 ```sql
 select i.*, d.mediane
 from cnrt_iris i left outer join desserte_aggregate_iris d on i.code_iris = d.iris_code 
-where d.poi_type in ('dimenc_usines')
-      and d.poi_id = 1;
+where d.poi_type in ('dimenc_usines') and d.poi_id = 1;
 ```
 
 #### Durée détaillée à Koniambo
 
+Ici, la distance à l'usine de tous les nœuds, utilisée sur [la carte détaillée de VKPP](dist/Export_QGIS_distance_usine_VKPP.jpg)
+
 ```sql
-select n.*, d.cost as duree from desserte_poi d join dittt_noeuds n on d.target = n.objectid where d.poi_type = 'dimenc_usines' and d.poi_id = 1;
+select n.*, d.cost as duree
+from desserte_poi d join dittt_noeuds n on d.target = n.objectid
+where d.poi_type in ('dimenc_usines') and d.poi_id = 1;
 ```
 
 #### Usine la plus proche en durée médiane
+
+Utilisée sur [la carte QGis](dist/Export_QGIS_distance_usine_la_plus_proche.jpg).
 
 ```sql
 with ranked as(
@@ -873,6 +890,8 @@ order by i.code_iris asc, rank asc;
 
 #### Centre minier le plus proche en durée médiane
 
+Utilisée sur [la carte QGis](dist/Export_QGIS_distance_centre_le_plus_proche.jpg).
+
 ```sql
 with ranked as(
     select
@@ -906,9 +925,55 @@ where true
 order by i.code_iris asc, rank asc;
 ```
 
+#### Distance aux dispensaires et hôpitaux
+
+Attention ici à ne pas essayer de sélectionner un sous-ensemble des types d'établissement que celui sur lequel on a agrégé par IRIS.
+Comme on a agrégé dans `desserte_aggregate_iris` avec la condition `type_etabli in ('Dispensaire', 'Hôpitaux', 'Pharmacie', 'Sage-Femme')`, pour avoir d'autres catégories, y compris un sous-ensemble, il faut refaire l'agrégat.
+Attention ici aussi à la superposition des POI avec la même géométrie, e.g., un cabinet avec plusieurs médecins, qui était évitable avec les ressources DIMENC mais plus sur ce jeu de données.
+
+```sql
+with ranked as(
+    select
+        d.iris_code,
+        d.poi_type,
+        d.poi_id,
+        rank() over (
+            partition by d.iris_code, d.poi_type order by d.mediane asc
+        ) as rank,
+        d.mediane as mediane
+    from desserte_aggregate_iris d
+    where d.mediane is not null
+),
+
+desserte as (
+    select *
+    from ranked
+    where poi_type in ('dass_etabs_sante') and rank = 1
+),
+
+poi as (
+    select *
+    from dass_etabs_sante
+    where type_etabli in ('Dispensaire', 'Hôpitaux', 'Pharmacie', 'Sage-Femme')
+)
+
+select 
+    i.code_iris,
+    i.lib_iris,
+    poi.denominatio as nom_etablissement,
+    poi.type_etabli as type_etablissement,
+    d.mediane,
+    i.wkb_geometry
+from cnrt_iris i
+     left outer join desserte d on i.code_iris = d.iris_code
+     left outer join poi on d.poi_id = poi.fid_etab 
+where true
+order by i.code_iris asc, rank asc;
+```
+
 ## Annexe
 
-### Comparaison avec la version 2021
+### Comparaison avec la desserte 2021
 
 Le dossier [tests](tests/) contient le matériel pour comparer la matrice de desserte 2024 avec celle calculée en 2021.
 On constate des écarts de quelques minutes sauf pour le centre minier numéro 32 Ouinné, qui est impacté par le choix de la composante connexe du réseau DITTT.
