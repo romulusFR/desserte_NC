@@ -42,19 +42,26 @@ Pour cela, mettre à jour le fichier [scripts/environment](scripts/environment) 
 
 ![Distance à l'usine métallurgique minier la plus proche en minutes](dist/Export_QGIS_distance_usine_la_plus_proche.jpg)
 
+![Distance à l'établissement de santé le plus proche en minutes](dist/Export_QGIS_distance_etablissement_le_plus_proche.jpg)
+
 ## Documents produits
 
 Les fichiers suivants sont diffusés dans le cadre de cette étude :
 
-- [cnrt_iris_2014.zip](dist/cnrt_iris_2014.zip) les IRIS utilisés dans le projet CNRT Mines et Territoires, au format _ESRI Shapefile_.
-- [nb_etab_sante_par_type_commune.csv](dist/nb_etab_sante_par_type_commune.csv) le nombre d'établissements de santé par commune.
-- [desserte_mine_iris.csv](dist/desserte_mine_iris.csv) la matrice de desserte entre sites miniers (centres ou usines) par IRIS au format vertical.
+- [cnrt_iris_2014.zip](dist/cnrt_iris_2014.zip) Les IRIS utilisés dans le projet CNRT Mines et Territoires, au format _ESRI Shapefile_.
+- [nb_etab_sante_par_type_commune.csv](dist/nb_etab_sante_par_type_commune.csv) Le nombre d'établissements de santé par commune.
+- [desserte_mine_iris.csv](dist/desserte_mine_iris.csv) La matrice de desserte entre sites miniers (centres ou usines) par IRIS au format vertical.
   - [desserte_mine_iris_pivot_minimum.csv](dist/desserte_mine_iris_pivot_minimum.csv) : la durée _minimum_ de desserte au format large.
   - [desserte_mine_iris_pivot_mediane.csv](dist/desserte_mine_iris_pivot_mediane.csv) : la durée _médiane_ de desserte au format large.
   - [desserte_mine_iris_pivot_moyenne.csv](dist/desserte_mine_iris_pivot_moyenne.csv) : la durée _moyenne_ de desserte au format large.
   - [desserte_mine_iris_pivot_maximum.csv](dist/desserte_mine_iris_pivot_maximum.csv) : la durée _maximum_ de desserte au format large.
-- [desserte_etabs_sante_iris.csv](dist/desserte_etabs_sante_iris.csv) la matrice de desserte entre établissements de santé (hôpitaux, dispensaires, pharmacies ou sage-femmes) par IRIS au format vertical.
+- [desserte_etabs_sante_iris.csv](dist/desserte_etabs_sante_iris.csv) La matrice de desserte entre établissements de santé (hôpitaux, dispensaires, pharmacies ou sage-femmes) par IRIS au format vertical.
   - [desserte_etabs_sante_iris_pivot_minimum.csv](dist/desserte_etabs_sante_iris_pivot_minimum.csv) : la durée _minimum_ de desserte au format large.
   - [desserte_etabs_sante_iris_pivot_mediane.csv](dist/desserte_etabs_sante_iris_pivot_mediane.csv) : la durée _médiane_ de desserte au format large.
   - [desserte_etabs_sante_iris_pivot_moyenne.csv](dist/desserte_etabs_sante_iris_pivot_moyenne.csv) : la durée _moyenne_ de desserte au format large.
   - [desserte_etabs_sante_iris_pivot_maximum.csv](dist/desserte_etabs_sante_iris_pivot_maximum.csv) : la durée _maximum_ de desserte au format large.
+- Les cartes suivantes :
+  - [Durée d'accès à l'usine KNS sur la zone VKPP pour chque noeud DITTT](dist/Export_QGIS_distance_usine_VKPP.jpg),
+  - [Choroplèthe de l'usine la plus proche par IRIS](dist/Export_QGIS_distance_usine_la_plus_proche.jpg),
+  - [Choroplèthe du centre minier le plus proche par IRIS](dist/Export_QGIS_distance_centre_le_plus_proche.jpg),
+  - [Choroplèthe de l'établissement de santé plus proche par IRIS](dist/Export_QGIS_distance_etablissement_le_plus_proche.jpg) (dispensaire, hôpital, sage-femme ou pharmacie).
