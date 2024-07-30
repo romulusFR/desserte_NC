@@ -1,5 +1,7 @@
 # Retour d'expérience sur la reprise du calcul de desserte
 
+## Points de friction
+
 Entre la réalisation en 2021 et la reprise en 2024, on note les points de frictions et les difficultés rencontrées.
 
 - Assez laborieux de trouver les liens (génération), télécharger, copier sur le serveur et enfin importer.
@@ -15,3 +17,11 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
 - Scripting / full auto : quel env, vérifier d'une màj à l'autre.
 - J'ai moi-même changé les formats : car ils sont mieux ! Hypothèse _après c'est mieux ?_ : le format pivot est le plus récent ? mais en pratique... le moins disant !
 - Toujours laisser la présentation à la présentation : typographie, arrondi/conversion entier.
+
+## TODO pour gérer POI
+
+- [ ] Voir à remplacer `desserte_aggregate_iris` et `desserte_poi` par des vues matérialisées, ou en tout cas voir la question des mises à jour.
+- [ ] Voir pourquoi quasiment aucun parallélisme, même pour les agrégats finaux.
+- [ ] Voir à utiliser les noms des relations comme catégories des POI et une catégorie existante comme une sous-catégorie, e.g., `type_etabli` pour les établissements de santé.
+  - En particulier, car cela fait porter l'agrégat sur le sous-ensemble des catégories qu'on ne sait plus séparer après.
+- [ ] Voir une notion d'héritage des tables de POI d'une table abstraite avec les attributs communs, car `poi_type` est proche d'un codage de l'héritage.
