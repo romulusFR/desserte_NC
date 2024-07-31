@@ -1,7 +1,6 @@
 # Élaboration d'une matrice de desserte en Nouvelle-Calédonie
 
 - [Élaboration d'une matrice de desserte en Nouvelle-Calédonie](#élaboration-dune-matrice-de-desserte-en-nouvelle-calédonie)
-  - [TODO](#todo)
   - [Import des données](#import-des-données)
     - [Création des tables et chargement](#création-des-tables-et-chargement)
     - [Nettoyage](#nettoyage)
@@ -18,19 +17,12 @@
     - [Requêtes pour génération de cartes](#requêtes-pour-génération-de-cartes)
   - [Annexe](#annexe)
     - [Comparaison avec la desserte 2021](#comparaison-avec-la-desserte-2021)
+    - [Comparaison avec le vol d'oiseau](#comparaison-avec-le-vol-doiseau)
     - [Environnement utilisé](#environnement-utilisé)
     - [Liste et taille des tables](#liste-et-taille-des-tables)
     - [Structures finales de l'ensemble des tables](#structures-finales-de-lensemble-des-tables)
 
 Ce document décrit la méthode calcul du temps de trajet par la route entre les IRIS et des points d'intérêts (POI), notamment les sites miniers (centre et usines) ou les établissements de santé de Nouvelle-Calédonie.
-
-## TODO
-
-- [ ] Voir à remplacer `desserte_aggregate_iris` et `desserte_poi` par des vues matérialisées, ou en tout cas voir la question des mises à jour.
-- [ ] Voir pourquoi quasiment aucun parallélisme, même pour les agrégats finaux.
-- [ ] Voir à utiliser les noms des relations comme catégories des POI et une catégorie existante comme une sous-catégorie, e.g., `type_etabli` pour les établissements de santé.
-  - En particulier, car cela fait porter l'agrégat sur le sous-ensemble des catégories qu'on ne sait plus séparer après.
-- [ ] Voir une notion d'héritage des tables de POI d'une table abstraite avec les attributs communs, car `poi_type` est proche d'un codage de l'héritage.
 
 ## Import des données
 
@@ -978,6 +970,104 @@ order by i.code_iris asc, rank asc;
 Le dossier [tests](tests/) contient le matériel pour comparer la matrice de desserte 2024 avec celle calculée en 2021.
 On constate des écarts de quelques minutes sauf pour le centre minier numéro 32 Ouinné, qui est impacté par le choix de la composante connexe du réseau DITTT.
 La version 2024 est plus cohérente sur ce point.
+
+### Comparaison avec le vol d'oiseau
+
+Sur le trajet de référence de Nouville à Baco, l'écart de distance entre le vol d'oiseau et le plus court chemin par la route est de 60.3 km.
+
+```sql
+with poi as (
+  select * from dittt_noeuds where objectid in ('270424', '200545')
+)
+select
+  p1.objectid as o1,
+  p2.objectid as o2,
+  st_distance(p1.wkb_geometry, p2.wkb_geometry) as distance
+from poi p1 join poi p2 on p1.objectid <> p2.objectid;
+
+--    o1   |   o2   |     distance      
+-- --------+--------+-------------------
+--  200545 | 270424 | 203193.3505882529
+--  270424 | 200545 | 203193.3505882529
+-- Time: 0,998 ms
+
+with q as (
+SELECT
+  direction.edge,
+  e.seg_type,
+  e.distance,
+  e.speed,
+  greatest(e.cost, e.reverse_cost) as cost,
+  ROUND(direction.agg_cost) AS agg_cost
+FROM pgr_dijkstra('SELECT * FROM dittt_segments_pgr',
+                   270424, 200545, TRUE) AS direction
+     JOIN dittt_segments_pgr e ON direction.edge = e.id
+ORDER BY seq)
+
+select sum(distance) from q;
+--   sum   
+-- --------
+--  263505
+-- Time: 1290,190 ms (00:01,290)
+```
+
+Au lieu de remplir `desserte_poi` via `pgr_dijkstra` ou `pgr_dijkstraCost` on pourrait calculer toutes les distances à vol d'oiseau via `st_distance`, les stocker dans `bird_poi` avec **exactement la même structure** puis agréger de la même façon par IRIS.
+
+```sql
+with routes AS (
+  SELECT DISTINCT source FROM dittt_segments_pgr WHERE seg_type = 'R'
+  UNION
+  SELECT DISTINCT target FROM dittt_segments_pgr WHERE seg_type = 'R'
+)
+
+INSERT INTO bird_poi
+    (
+    SELECT
+        poi.dittt_noeud_ref AS source,
+        'dimenc_centres' AS poi_type,
+        poi.objectid AS poi_id,
+        n.objectid AS target,
+        st_distance(poi.wkb_geometry, n.wkb_geometry) AS cost
+    FROM dimenc_centres poi CROSS JOIN dittt_noeuds n
+    WHERE n.objectid IN (SELECT * FROM routes)
+    );
+
+-- INSERT 0 3008360
+-- Time: 59837,772 ms (00:59,838)
+```
+
+Pour l'agrégat. ⚠️ Ici, ce sont des distances en km.
+
+```sql
+WITH aggregates AS (
+  SELECT
+    'dimenc_centres' AS poi_type,
+    poi.objectid AS poi_id,
+    poi.titulaire || ' - ' || poi.site_minie AS poi_name,
+    i.code_iris AS iris_code,
+    i.lib_iris AS iris_libelle,
+    MIN(d.cost)/1000 AS minimum,
+    percentile_disc(0.5) WITHIN GROUP (ORDER BY d.cost/1000) AS mediane,
+    AVG(d.cost)/1000 AS moyenne,
+    MAX(d.cost)/1000 AS maximum
+  FROM 
+    (dimenc_centres poi CROSS JOIN cnrt_iris i)
+    LEFT OUTER JOIN (
+    (SELECT * FROM bird_poi WHERE poi_type = 'dimenc_centres') d
+      JOIN dittt_noeuds n ON d.target = n.objectid)
+      ON ST_Contains(i.wkb_geometry, n.wkb_geometry) AND d.poi_id = poi.objectid
+  GROUP BY poi.objectid, i.fid_iris
+  ORDER BY poi.objectid, i.code_iris
+)
+INSERT INTO bird_aggregate_iris (SELECT * FROM aggregates)
+;
+```
+
+Dans QGis, on obtient un résultat comme suit, à comparer, **en faisant attention à aux échelles** avec celle par durée de trajet routier.
+
+![](dist/Export_QGIS_distance_centre_vol_d_oiseau.jpg)
+
+![](dist/Export_QGIS_distance_centre_le_plus_proche.jpg)
 
 ### Environnement utilisé
 

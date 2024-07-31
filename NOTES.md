@@ -1,5 +1,7 @@
 # Retour d'expérience sur la reprise du calcul de desserte
 
+Notes personnelles pour approfondissement et discussions éventuelles sur PostGIS.
+
 ## Points de friction
 
 Entre la réalisation en 2021 et la reprise en 2024, on note les points de frictions et les difficultés rencontrées.
@@ -25,3 +27,6 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
 - [ ] Voir à utiliser les noms des relations comme catégories des POI et une catégorie existante comme une sous-catégorie, e.g., `type_etabli` pour les établissements de santé.
   - En particulier, car cela fait porter l'agrégat sur le sous-ensemble des catégories qu'on ne sait plus séparer après.
 - [ ] Voir une notion d'héritage des tables de POI d'une table abstraite avec les attributs communs, car `poi_type` est proche d'un codage de l'héritage.
+- [ ] Voir un paramètre pour les différents modes de calculs plutôt que des tables différentes.
+  - [ ] quand `INSERT` dans une table des caluls versus quand `MATERIALIZE` ? SI on veut contrôler les insert.
+  - [ ] quand (design pattern ?) avoir une table pre/postfixée : des cas d'héritage ? On "sépare" quand on veut quoi ... ?
