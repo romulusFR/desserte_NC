@@ -19,6 +19,7 @@ Entre la réalisation en 2021 et la reprise en 2024, on note les points de frict
 - Scripting / full auto : quel env, vérifier d'une màj à l'autre.
 - J'ai moi-même changé les formats : car ils sont mieux ! Hypothèse _après c'est mieux ?_ : le format pivot est le plus récent ? mais en pratique... le moins disant !
 - Toujours laisser la présentation à la présentation : typographie, arrondi/conversion entier.
+- Pb récurrent, _à voir la biblio_ : comment assurer le suivi/versionnement des objets dans le temps, en particulier si non-arborescent ? : e.g., les modifictions des limites adminstratives.
 
 ## TODO pour gérer POI
 
